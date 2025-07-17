@@ -94,6 +94,52 @@ TRANSFORMS = {
     "VG099": lambda v: "ON" if v == "1" else "OFF",
 }
 
+# Icons for each sensor type
+ICONS = {
+    "VG011": "mdi:wifi",  # Wi-Fi Signal
+    "VG012": "mdi:cellphone-wireless",  # Wi-Fi Firmware version
+    "VG132": "mdi:access-point-network",  # Wi-Fi Mac ID
+    "VG136": "mdi:router-wireless",  # Router SSID
+    "VG304": "mdi:clock-time-four-outline",  # Timezone offset
+    "VG042": "mdi:timer-outline",  # System Uptime
+    "VG144": "mdi:thermometer",  # Temperature
+    "VG146": "mdi:lightning-bolt",  # Total Energy
+    "VG211": "mdi:power-plug",  # Energy Usage
+    "VG033": "mdi:battery-charging",  # Charging Mode
+    "VG095": "mdi:battery",  # Battery Capacity
+    "VG003": "mdi:information-outline",  # Device Status Code
+    "VG010": "mdi:help-circle-outline",  # Unknown tag
+    "VG013": "mdi:tag-outline",  # Device Model Parameter
+    "VG109": "mdi:clock-outline",  # Last Update Time
+    "VG041": "mdi:power",  # Power Mode
+    "VG094": "mdi:cog-outline",  # System Mode
+    "VG206": "mdi:flag-outline",  # Unknown numeric flag
+    "VG014": "mdi:flash",  # Input Voltage
+    "VG015": "mdi:flash-outline",  # Output Voltage
+    "VG016": "mdi:battery-outline",  # Battery Voltage
+    "VG017": "mdi:battery-charging-outline",  # Battery Percentage
+    "VG018": "mdi:current-ac",  # Charging Current
+    "VG019": "mdi:gauge",  # Load Percentage
+    "VG020": "mdi:clock",  # Backup Time
+    "VG021": "mdi:home-lightning-bolt-outline",  # Inverter mode
+    "VG022": "mdi:power-socket",  # Inverter Status
+    "VG023": "mdi:battery-alert",  # Battery Status
+    "VG024": "mdi:heart-pulse",  # Battery Health
+    "VG025": "mdi:battery-high",  # Battery Capacity in Ah
+    "VG026": "mdi:timer",  # Total Runtime
+    "VG098": "mdi:timer-sand",  # Total Runtime Mirror
+    "VG099": "mdi:turbocharger",  # Turbo Charging
+    "VG037": "mdi:timer-off-outline",  # Forced power cut duration
+    "VG038": "mdi:power-off",  # Forced power cut status
+    "VG035": "mdi:speedometer",  # Performance Level
+    "VG185": "mdi:weather-sunny",  # Daytime Load Usage
+    "VG071": "mdi:alarm-light-outline",  # Advance low battery alarm
+    "VG034": "mdi:volume-high",  # Mains changeover buzzer
+    "VG050": "mdi:alert-circle-outline",  # Alarm if load exceeds
+    "VG105": "mdi:lock-outline",  # Battery type switch lock/unlock
+    "VG036": "mdi:power-standby",  # Appliance Mode
+}
+
 def calculate_battery_percentage(vg_data):
     try:
         battery_voltage = float(vg_data.get('VG014', '0'))
@@ -199,7 +245,14 @@ def on_message_handler(hass, entities, telemetry_topic):
 
 def setup_platform(hass, config, add_entities, discovery_info=None):
     """Set up the V-Guard Inverter sensors."""
-    entry_id = list(hass.data[DOMAIN].keys())[0]  # Assuming single entry
+    # This function is kept for backwards compatibility
+    # New installations will use async_setup_entry
+    pass
+
+async def async_setup_entry(hass, entry, async_add_entities):
+    """Set up the V-Guard Inverter sensors based on config entry."""
+    # Get the entry data
+    entry_id = entry.entry_id
     conf = hass.data[DOMAIN][entry_id]
     
     # Check if we already have a shared MQTT client
@@ -247,7 +300,9 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
     client.on_message = message_handler
     client.subscribe(telemetry_topic)
     
-    add_entities(entities)
+    async_add_entities(entities)
+    
+    return True
 
 class VGuardSensor(Entity):
     """Representation of a V-Guard Inverter sensor."""
@@ -267,6 +322,11 @@ class VGuardSensor(Entity):
     def state(self):
         """Return the state of the sensor."""
         return self._state
+
+    @property
+    def icon(self):
+        """Return the icon of the sensor."""
+        return ICONS.get(self.key, "mdi:help-circle")
 
     @property
     def available(self):

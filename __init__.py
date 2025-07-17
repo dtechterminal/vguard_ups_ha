@@ -79,8 +79,9 @@ async def async_setup_entry(hass, entry):
                 # Store latest data
                 hass.data[DOMAIN][entry.entry_id]["latest_data"] = data
                 
-                # Signal data update to all platforms
-                hass.helpers.dispatcher.async_dispatcher_send(f"{DOMAIN}_data_update", data)
+                # Signal data update to all platforms with a unique identifier
+                signal = f"{DOMAIN}_{entry.entry_id}_data_update"
+                hass.helpers.dispatcher.async_dispatcher_send(signal, data)
             except Exception as e:
                 _LOGGER.error(f"Error processing telemetry: {e}")
     
@@ -88,10 +89,28 @@ async def async_setup_entry(hass, entry):
     client.on_message = on_message
     client.subscribe(telemetry_topic)
     
-    # Forward the setup to the sensor and switch platforms
-    discovery.load_platform(hass, "sensor", DOMAIN, {}, entry)
-    discovery.load_platform(hass, "switch", DOMAIN, {}, entry)
-    discovery.load_platform(hass, "mode_select", DOMAIN, {}, entry)
-    discovery.load_platform(hass, "number", DOMAIN, {}, entry)
+    # Forward the setup to all platforms
+    await hass.config_entries.async_forward_entry_setups(entry, ["sensor", "switch", "select", "number"])
 
     return True
+
+async def async_unload_entry(hass, entry):
+    """Unload a config entry."""
+    # Stop the MQTT client
+    if entry.entry_id in hass.data[DOMAIN]:
+        client = hass.data[DOMAIN][entry.entry_id].get("mqtt_client")
+        if client:
+            _LOGGER.info("Stopping MQTT client for V-Guard Inverter")
+            client.loop_stop()
+            client.disconnect()
+    
+    # Unload platforms
+    unload_ok = await hass.config_entries.async_unload_platforms(
+        entry, ["sensor", "switch", "select", "number"]
+    )
+    
+    # Remove entry data
+    if unload_ok and entry.entry_id in hass.data[DOMAIN]:
+        hass.data[DOMAIN].pop(entry.entry_id)
+    
+    return unload_ok

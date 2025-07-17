@@ -14,16 +14,29 @@ NUMBERS = {
     "load_alarm_threshold": ("VG050", 50, 100, 10, "Load Alarm Threshold"),
 }
 
+# Icons for each number
+NUMBER_ICONS = {
+    "performance_level": "mdi:speedometer",
+    "load_alarm_threshold": "mdi:alert-circle-outline",
+}
+
 def setup_platform(hass, config, add_entities, discovery_info=None):
     """Set up the V-Guard Inverter numbers."""
-    entry_id = list(hass.data[DOMAIN].keys())[0]
+    # This function is kept for backwards compatibility
+    # New installations will use async_setup_entry
+    pass
+
+async def async_setup_entry(hass, entry, async_add_entities):
+    """Set up the V-Guard Inverter numbers based on config entry."""
+    # Get the entry data
+    entry_id = entry.entry_id
     domain_data = hass.data[DOMAIN][entry_id]
     
     # Wait for sensor platform to initialize if needed
     if 'mqtt_client' not in domain_data:
         _LOGGER.warning("MQTT client not found in domain data. Sensor platform may not be initialized yet.")
         # We'll create a minimal setup and return
-        return
+        return False
     
     # Use the shared MQTT client and topics
     client = domain_data['mqtt_client']
@@ -35,7 +48,9 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
     for key, (vg_code, min_val, max_val, step, name) in NUMBERS.items():
         entities.append(VGuardNumber(hass, client, control_topic, vg_code, min_val, max_val, step, name, key))
     
-    add_entities(entities)
+    async_add_entities(entities)
+    
+    return True
 
 class VGuardNumber(number.NumberEntity):
     """Representation of a V-Guard Inverter number."""
@@ -52,6 +67,12 @@ class VGuardNumber(number.NumberEntity):
         self._attr_value = min_val
         self._attr_name = name
         self._attr_unique_id = f"vguard_number_{unique_key}"
+        self._unique_key = unique_key
+        
+    @property
+    def icon(self):
+        """Return the icon of the number."""
+        return NUMBER_ICONS.get(self._unique_key, "mdi:numeric")
 
     def set_value(self, value: float):
         """Set new value."""
