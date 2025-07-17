@@ -1,0 +1,8 @@
+{
+  "name": "V-Guard Inverter",
+  "content_in_root": true,
+  "render_readme": true,
+  "domains": ["sensor", "switch", "number", "select"],
+  "homeassistant": "2023.8.0",
+  "iot_class": "local_push"
+}
