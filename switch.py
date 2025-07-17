@@ -57,6 +57,9 @@ async def async_setup_entry(hass, entry, async_add_entities):
     for key, (vg_code, on_value, off_value, name) in SWITCHES.items():
         entities.append(VGuardSwitch(hass, client, control_topic, vg_code, on_value, off_value, name, key))
     
+    # Store entities in domain data for the message handler to access
+    domain_data['switch_entities'] = entities
+    
     async_add_entities(entities)
     
     return True

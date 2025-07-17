@@ -1,15 +1,15 @@
 {
     "domain": "vguard_inverter",
     "name": "V-Guard Inverter",
-    "version": "1.0.0",
-    "documentation": "https://github.com/yourusername/vguard_inverter",
-    "issue_tracker": "https://github.com/yourusername/vguard_inverter/issues",
+    "version": "1.0.3",
+    "documentation": "https://github.com/dtechterminal/vguard_ha_integration",
+    "issue_tracker": "https://github.com/dtechterminal/vguard_ha_integration/issues",
     "requirements": ["paho-mqtt>=1.6.1"],
     "dependencies": [],
-    "codeowners": ["@yourusername"],
+    "codeowners": ["@dtechterminal"],
     "iot_class": "local_push",
     "config_flow": true,
     "quality_scale": "silver",
     "homeassistant": "2023.8.0",
-    "icon": "icon.png"
+    "icon": "https://raw.githubusercontent.com/dtechterminal/vguard_ha_integration/main/icon.png"
 }

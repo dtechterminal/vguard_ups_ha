@@ -9,6 +9,7 @@ This integration allows you to monitor and control your V-Guard Inverter from Ho
 - **Real-time monitoring** of inverter status, battery levels, and power metrics
 - **Control capabilities** for inverter settings and modes
 - **Intuitive icons** for all entities to improve dashboard visualization
+- **Graphical history display** for voltage, ampere, signal strength, temperature, battery, and energy sensors using Home Assistant's built-in graphs
 - **Thread-safe implementation** to prevent Home Assistant crashes
 - **HACS compatible** for easy installation and updates
 
@@ -42,34 +43,49 @@ This integration allows you to monitor and control your V-Guard Inverter from Ho
 
 ### Sensors
 
-| Entity | Description | Icon |
-|--------|-------------|------|
-| Wi-Fi Signal | Signal strength of the inverter's Wi-Fi connection | mdi:wifi |
-| Temperature | Inverter temperature | mdi:thermometer |
-| Battery Voltage | Current battery voltage | mdi:battery-outline |
-| Battery Percentage | Current battery charge level | mdi:battery-charging-outline |
-| Input Voltage | Input voltage from the mains | mdi:flash |
-| Output Voltage | Output voltage to connected devices | mdi:flash-outline |
-| Total Energy | Total energy consumption | mdi:lightning-bolt |
-| Energy Usage | Current energy usage | mdi:power-plug |
-| System Uptime | Time since last restart | mdi:timer-outline |
-| Battery Health | Health status of the battery | mdi:heart-pulse |
+| Entity | Description | Icon | Graph Display |
+|--------|-------------|------|--------------|
+| Wi-Fi Signal | Signal strength of the inverter's Wi-Fi connection | mdi:wifi | Yes |
+| Temperature | Inverter temperature | mdi:thermometer | Yes |
+| Battery Voltage | Current battery voltage | mdi:battery-outline | Yes |
+| Battery Percentage | Current battery charge level | mdi:battery-charging-outline | Yes |
+| Input Voltage | Input voltage from the mains | mdi:flash | Yes |
+| Output Voltage | Output voltage to connected devices | mdi:flash-outline | Yes |
+| Charging Current | Current flowing to the battery | mdi:current-ac | Yes |
+| Total Energy | Total energy consumption | mdi:lightning-bolt | Yes |
+| Energy Usage | Current energy usage | mdi:power-plug | Yes |
+| System Uptime | Time since last restart | mdi:timer-outline | No |
+| Battery Health | Health status of the battery | mdi:heart-pulse | No |
+| Wi-Fi MAC ID | MAC address of the inverter's Wi-Fi module | mdi:access-point-network | No |
 
 ### Controls
 
-| Entity | Description | Icon |
-|--------|-------------|------|
-| Inverter Mode | Select between Normal, UPS, or Equipment modes | mdi:home-lightning-bolt-outline |
-| Performance Level | Adjust the performance level (1-5) | mdi:speedometer |
-| Load Alarm Threshold | Set the threshold for load alarms (50-100%) | mdi:alert-circle-outline |
-| Turbo Charging | Toggle turbo charging mode | mdi:turbocharger |
-| Advance Low Battery Alarm | Toggle advance low battery alarm | mdi:battery-alert |
-| Mains Changeover Buzzer | Toggle the buzzer for mains changeover | mdi:volume-high |
-| Appliance Mode | Toggle appliance mode | mdi:power-standby |
-| Daytime Load Usage | Toggle daytime load usage | mdi:weather-sunny |
-| Battery Type Lock | Lock/unlock battery type switching | mdi:lock |
+| Entity | Description | Icon | Type |
+|--------|-------------|------|------|
+| Inverter Mode | Select between Normal, UPS, or Equipment modes | mdi:home-lightning-bolt-outline | Select |
+| Performance Level | Adjust the performance level (1-7) | mdi:speedometer | Number |
+| Load Alarm Threshold | Set the threshold for load alarms (50-100%) | mdi:alert-circle-outline | Number |
+| Turbo Charging | Toggle turbo charging mode | mdi:battery-charging-high | Switch |
+| Advance Low Battery Alarm | Toggle advance low battery alarm | mdi:battery-alert | Switch |
+| Mains Changeover Buzzer | Toggle the buzzer for mains changeover | mdi:volume-high | Switch |
+| Appliance Mode | Toggle appliance mode | mdi:power-standby | Switch |
+| Daytime Load Usage | Toggle daytime load usage | mdi:weather-sunny | Switch |
+| Battery Type Lock | Lock/unlock battery type switching | mdi:lock | Switch |
 
 ## Recent Changes
+
+### Version 1.0.3
+- Extended graphical history display to more sensors (WiFi signal, temperature, battery, energy)
+- Fixed Wi-Fi MAC address formatting to display in standard colon-separated format
+- Fixed Turbo charging icon display issue
+- Fixed Performance level and Load alarm Threshold "unknown" states
+- Combined duplicate switches and sensors for cleaner interface
+- Updated documentation with entity types and improved descriptions
+
+### Version 1.0.2
+- Added graphical history display for voltage and ampere sensors
+- Updated documentation to indicate which sensors support graph display
+- Added Charging Current sensor to the documentation
 
 ### Version 1.0.1
 - Added appropriate icons for all entities

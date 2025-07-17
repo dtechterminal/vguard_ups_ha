@@ -3,6 +3,7 @@ import logging
 import datetime
 import paho.mqtt.client as mqtt
 from homeassistant.components import sensor
+from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
 from homeassistant.const import (
     CONF_HOST, CONF_PORT, CONF_TOKEN, STATE_UNKNOWN
 )
@@ -43,23 +44,26 @@ DESCRIPTIONS = {
     "VG018": "Charging Current",
     "VG019": "Load Percentage",
     "VG020": "Backup Time",
-    "VG021": "Inverter mode (0=Normal,1=UPS,2=Equipment)",
     "VG022": "Inverter Status",
     "VG023": "Battery Status",
     "VG024": "Battery Health",
     "VG025": "Battery Capacity in Ah",
     "VG026": "Total Runtime",
     "VG098": "Total Runtime Mirror",
-    "VG099": "Turbo Charging",
     "VG037": "Forced power cut duration (minutes)",
     "VG038": "Forced power cut status",
-    "VG035": "Performance Level (1-7)",
-    "VG185": "Daytime Load Usage",
-    "VG071": "Advance low battery alarm",
-    "VG034": "Mains changeover buzzer (0=on, 2=off)",
-    "VG050": "Alarm if load exceeds",
-    "VG105": "Battery type switch lock/unlock (1=unlocked,0=locked)",
-    "VG036": "Appliance Mode (0=off,1=on)",
+    # Removed duplicate sensors that are already implemented as switches:
+    # "VG099": "Turbo Charging",
+    # "VG071": "Advance low battery alarm",
+    # "VG034": "Mains changeover buzzer (0=on, 2=off)",
+    # "VG036": "Appliance Mode (0=off,1=on)",
+    # "VG185": "Daytime Load Usage",
+    # "VG105": "Battery type switch lock/unlock (1=unlocked,0=locked)",
+    # Removed duplicate sensor that is already implemented as a select:
+    # "VG021": "Inverter mode (0=Normal,1=UPS,2=Equipment)",
+    # Removed duplicate sensor that is already implemented as a number:
+    # "VG035": "Performance Level (1-7)",
+    # "VG050": "Alarm if load exceeds",
 }
 
 TRANSFORMS = {
@@ -92,6 +96,7 @@ TRANSFORMS = {
     "VG021": lambda v: "Normal" if v == "0" else ("UPS" if v == "1" else ("Equipment" if v == "2" else v)),
     "VG105": lambda v: "Unlocked" if v == "1" else ("Locked" if v == "0" else v),
     "VG099": lambda v: "ON" if v == "1" else "OFF",
+    "VG132": lambda v: ':'.join(v[i:i+2] for i in range(0, len(v), 2)) if v else v,  # Format MAC address with colons
 }
 
 # Icons for each sensor type
@@ -128,7 +133,7 @@ ICONS = {
     "VG025": "mdi:battery-high",  # Battery Capacity in Ah
     "VG026": "mdi:timer",  # Total Runtime
     "VG098": "mdi:timer-sand",  # Total Runtime Mirror
-    "VG099": "mdi:turbocharger",  # Turbo Charging
+    "VG099": "mdi:battery-charging-high",  # Turbo Charging
     "VG037": "mdi:timer-off-outline",  # Forced power cut duration
     "VG038": "mdi:power-off",  # Forced power cut status
     "VG035": "mdi:speedometer",  # Performance Level
@@ -235,6 +240,72 @@ def on_message_handler(hass, entities, telemetry_topic):
                         # Log which entities are not being updated
                         _LOGGER.debug(f"Entity {entity.key} not found in data")
                 
+                # Update number entities if they exist in domain data
+                if DOMAIN in hass.data:
+                    for entry_id in hass.data[DOMAIN]:
+                        domain_data = hass.data[DOMAIN][entry_id]
+                        
+                        # Update number entities
+                        if 'number_entities' in domain_data:
+                            for number_entity in domain_data['number_entities']:
+                                vg_code = number_entity._vg_code
+                                if vg_code in data:
+                                    value = data[vg_code]
+                                    try:
+                                        # Convert to float and ensure it's within the allowed range
+                                        float_value = float(value)
+                                        if number_entity._attr_min_value <= float_value <= number_entity._attr_max_value:
+                                            number_entity._attr_value = float_value
+                                            _LOGGER.debug(f"Updating number entity {vg_code} with value {float_value}")
+                                            # Use thread-safe method to update entity state
+                                            schedule_entity_update(hass, number_entity)
+                                    except (ValueError, TypeError):
+                                        _LOGGER.warning(f"Failed to convert {vg_code} value '{value}' to number")
+                        
+                        # Update select entities
+                        if 'select_entities' in domain_data:
+                            for select_entity in domain_data['select_entities']:
+                                vg_code = select_entity._vg_code
+                                if vg_code in data:
+                                    value = data[vg_code]
+                                    try:
+                                        # Find the corresponding option for this value
+                                        if value in select_entity._values:
+                                            index = select_entity._values.index(value)
+                                            option = select_entity._options[index]
+                                            select_entity._attr_current_option = option
+                                            _LOGGER.debug(f"Updating select entity {vg_code} with option {option} for value {value}")
+                                            # Use thread-safe method to update entity state
+                                            schedule_entity_update(hass, select_entity)
+                                    except (ValueError, IndexError):
+                                        _LOGGER.warning(f"Failed to find option for {vg_code} value '{value}'")
+                        
+                        # Update switch entities
+                        if 'switch_entities' in domain_data:
+                            for switch_entity in domain_data['switch_entities']:
+                                vg_code = switch_entity._vg_code
+                                if vg_code in data:
+                                    value = data[vg_code]
+                                    try:
+                                        # Determine if the switch should be on or off based on the value
+                                        if value == switch_entity._on_value:
+                                            new_state = True
+                                        elif value == switch_entity._off_value:
+                                            new_state = False
+                                        else:
+                                            # If the value doesn't match either on or off value, log a warning
+                                            _LOGGER.warning(f"Received unexpected value '{value}' for switch {vg_code}")
+                                            continue
+                                            
+                                        # Only update if the state has changed
+                                        if switch_entity._state != new_state:
+                                            switch_entity._state = new_state
+                                            _LOGGER.debug(f"Updating switch entity {vg_code} with state {new_state}")
+                                            # Use thread-safe method to update entity state
+                                            schedule_entity_update(hass, switch_entity)
+                                    except Exception as switch_err:
+                                        _LOGGER.warning(f"Failed to update switch {vg_code}: {switch_err}")
+                
                 # If only VG011 (Wi-Fi Signal) is being updated, log a warning
                 if "VG011" in data and update_count == 1:
                     _LOGGER.warning("Only Wi-Fi Signal (VG011) is being updated. This may indicate an issue with the data format.")
@@ -316,7 +387,38 @@ class VGuardSensor(Entity):
         self._state = STATE_UNKNOWN
         self._attr_name = DESCRIPTIONS.get(key, key)
         self._attr_unique_id = f"vguard_{key.lower()}"
-        self._attr_device_class = None  # Can be set based on key if needed
+        self._attr_device_class = None
+        self._attr_state_class = None
+        
+        # Set device_class and state_class for voltage sensors
+        if key in ["VG014", "VG015", "VG016"]:  # Input, Output, Battery Voltage
+            self._attr_device_class = SensorDeviceClass.VOLTAGE
+            self._attr_state_class = SensorStateClass.MEASUREMENT
+            
+        # Set device_class and state_class for current sensors
+        elif key == "VG018":  # Charging Current
+            self._attr_device_class = SensorDeviceClass.CURRENT
+            self._attr_state_class = SensorStateClass.MEASUREMENT
+            
+        # Set device_class and state_class for WiFi signal
+        elif key == "VG011":  # WiFi Signal
+            self._attr_device_class = SensorDeviceClass.SIGNAL_STRENGTH
+            self._attr_state_class = SensorStateClass.MEASUREMENT
+            
+        # Set device_class for temperature
+        elif key == "VG144":  # Temperature
+            self._attr_device_class = SensorDeviceClass.TEMPERATURE
+            self._attr_state_class = SensorStateClass.MEASUREMENT
+            
+        # Set device_class for energy sensors
+        elif key in ["VG146", "VG211"]:  # Total Energy, Energy Usage
+            self._attr_device_class = SensorDeviceClass.ENERGY
+            self._attr_state_class = SensorStateClass.TOTAL_INCREASING
+            
+        # Set device_class for battery percentage
+        elif key == "VG017":  # Battery Percentage
+            self._attr_device_class = SensorDeviceClass.BATTERY
+            self._attr_state_class = SensorStateClass.MEASUREMENT
 
     @property
     def state(self):

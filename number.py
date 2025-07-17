@@ -48,6 +48,9 @@ async def async_setup_entry(hass, entry, async_add_entities):
     for key, (vg_code, min_val, max_val, step, name) in NUMBERS.items():
         entities.append(VGuardNumber(hass, client, control_topic, vg_code, min_val, max_val, step, name, key))
     
+    # Store entities in domain data for the message handler to access
+    domain_data['number_entities'] = entities
+    
     async_add_entities(entities)
     
     return True

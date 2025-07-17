@@ -46,6 +46,9 @@ async def async_setup_entry(hass, entry, async_add_entities):
     for key, (vg_code, options, values, name) in SELECTS.items():
         entities.append(VGuardSelect(hass, client, control_topic, vg_code, options, values, name, key))
     
+    # Store entities in domain data for the message handler to access
+    domain_data['select_entities'] = entities
+    
     async_add_entities(entities)
     
     return True
