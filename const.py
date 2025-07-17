@@ -1,0 +1,1 @@
+DOMAIN = "vguard_inverter"

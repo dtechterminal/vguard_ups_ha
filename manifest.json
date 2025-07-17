@@ -1,0 +1,10 @@
+{
+    "domain": "vguard_inverter",
+    "name": "V-Guard Inverter",
+    "version": "1.0.0",
+    "requirements": ["paho-mqtt>=1.6.1"],
+    "dependencies": [],
+    "codeowners": ["@yourusername"],
+    "iot_class": "local_push",
+    "config_flow": true
+}
