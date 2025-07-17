@@ -71,7 +71,13 @@ class VGuardNumber(number.NumberEntity):
         self._attr_name = name
         self._attr_unique_id = f"vguard_number_{unique_key}"
         self._unique_key = unique_key
-        
+        self._attr_native_value = min_val
+
+    @property
+    def native_value(self) -> float | None:
+        return self._attr_native_value
+
+
     @property
     def icon(self):
         """Return the icon of the number."""
@@ -81,6 +87,5 @@ class VGuardNumber(number.NumberEntity):
         """Set new value."""
         int_value = int(value)
         self._client.publish(self._topic, f"{self._vg_code}:{int_value}")
-        self._attr_value = int_value
-        # Use thread-safe method to update entity state
+        self._attr_native_value = int_value  # update the authoritative attribute
         schedule_entity_update(self._hass, self)

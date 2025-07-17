@@ -16,17 +16,17 @@ SWITCHES = {
     "mains_changeover_buzzer": ("VG034", "0", "2", "Mains Changeover Buzzer"),  # 0=on, 2=off
     "appliance_mode": ("VG036", "1", "0", "Appliance Mode"),
     "daytime_load_usage": ("VG185", "1", "0", "Daytime Load Usage"),
-    "battery_type_lock": ("VG105", "0", "1", "Battery Type Lock"),  # Inverted: on=locked (0), off=unlocked (1)
+    "battery_type_unlock": ("VG105", "1", "0", "Battery Type Unlock"),
 }
 
 # Icons for each switch
 SWITCH_ICONS = {
-    "turbo_charging": "mdi:turbocharger",
+    "turbo_charging": "mdi:battery-charging-high",
     "advance_low_battery_alarm": "mdi:battery-alert",
     "mains_changeover_buzzer": "mdi:volume-high",
     "appliance_mode": "mdi:power-standby",
     "daytime_load_usage": "mdi:weather-sunny",
-    "battery_type_lock": "mdi:lock",
+    "battery_type_unlock": "mdi:lock-open-variant",
 }
 
 def setup_platform(hass, config, add_entities, discovery_info=None):
