@@ -26,7 +26,7 @@
         },
         "data_description": {
           "host": "The IP address of your V-Guard Inverter (e.g., 192.168.0.4)",
-          "port": "The MQTT port number (usually 8883)",
+          "port": "The MQTT port number (usually 1883)",
           "token": "The serial number of your V-Guard Inverter"
         }
       }

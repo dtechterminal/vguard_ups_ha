@@ -76,6 +76,10 @@ This integration allows you to monitor and control your V-Guard Inverter from Ho
 
 ## Recent Changes
 
+### Version 2.1.1
+- **Fixed Default Port**: Changed default MQTT port from 8883 to 1883 (standard MQTT port)
+- **Tested with Real Device**: Verified working with actual V-Guard inverter hardware
+
 ### Version 2.1.0
 - **Automatic Device Discovery**: Integration now automatically detects V-Guard inverters on MQTT
 - **Improved Setup Flow**: Choose between automatic discovery or manual configuration

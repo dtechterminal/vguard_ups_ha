@@ -98,7 +98,7 @@ class VGuardInverterConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         data_schema = vol.Schema(
             {
                 vol.Required(CONF_HOST, default="192.168.0.4"): cv.string,
-                vol.Required(CONF_PORT, default=8883): cv.port,
+                vol.Required(CONF_PORT, default=1883): cv.port,
                 vol.Required(CONF_TOKEN): cv.string,
             }
         )
@@ -132,11 +132,11 @@ class VGuardInverterConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
                         # Extract host from payload if available (VG011 might contain this)
                         host = payload.get("host", "192.168.0.4")
-                        port = payload.get("port", 8883)
+                        port = payload.get("port", 1883)
                     except (json.JSONDecodeError, AttributeError):
                         # Default values if payload parsing fails
                         host = "192.168.0.4"
-                        port = 8883
+                        port = 1883
 
                     # Store discovered device
                     if serial not in discovered:
