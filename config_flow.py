@@ -40,6 +40,12 @@ class VGuardInverterConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             selected_device = user_input["device"]
             device_data = self.discovered_devices[selected_device]
 
+            # Allow user to customize the MQTT broker if needed
+            if "customize" in user_input and user_input.get("customize"):
+                # Store the serial and show manual config with prefilled serial
+                self._discovered_serial = device_data[CONF_TOKEN]
+                return await self.async_step_manual()
+
             # Check if already configured
             await self.async_set_unique_id(device_data[CONF_TOKEN])
             self._abort_if_unique_id_configured()
@@ -141,19 +147,9 @@ class VGuardInverterConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
                 # Don't add duplicates and validate serial number
                 if serial and serial not in discovered and len(serial) > 5:
-                    # Get MQTT broker config from Home Assistant's MQTT integration
-                    mqtt_data = self.hass.data.get("mqtt")
-                    if mqtt_data:
-                        # Try to get broker from MQTT config
-                        host = "192.168.0.4"  # Default fallback
-                        port = 1883
-                    else:
-                        host = "192.168.0.4"
-                        port = 1883
-
                     discovered[serial] = {
-                        CONF_HOST: host,
-                        CONF_PORT: port,
+                        CONF_HOST: "192.168.0.4",  # User will need to update if different
+                        CONF_PORT: 1883,
                         CONF_TOKEN: serial,
                     }
                     _LOGGER.info("✓ Discovered V-Guard inverter: %s", serial)
@@ -165,13 +161,21 @@ class VGuardInverterConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             # Check if MQTT is available
             if "mqtt" not in self.hass.data:
                 _LOGGER.error("MQTT integration is not set up in Home Assistant")
+                _LOGGER.error("Please configure the MQTT integration first")
                 return {}
 
+            _LOGGER.info("MQTT integration found in Home Assistant")
+
             # Subscribe to discovery topic
-            _LOGGER.info("Subscribing to MQTT topic for discovery...")
-            unsubscribe = await mqtt.async_subscribe(
-                self.hass, discovery_topic, message_received, 1
-            )
+            _LOGGER.info("Subscribing to MQTT topic: %s", discovery_topic)
+            try:
+                unsubscribe = await mqtt.async_subscribe(
+                    self.hass, discovery_topic, message_received, 1
+                )
+                _LOGGER.info("Successfully subscribed to MQTT topic")
+            except Exception as sub_err:
+                _LOGGER.error("Failed to subscribe to MQTT: %s", sub_err, exc_info=True)
+                return {}
 
             # Wait for discovery timeout with progress logging
             _LOGGER.info("Listening for devices (30 seconds)...")

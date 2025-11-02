@@ -1,7 +1,7 @@
 {
     "domain": "vguard_inverter",
     "name": "V-Guard Inverter",
-    "version": "2.2.0",
+    "version": "2.2.1",
     "documentation": "https://github.com/dtechterminal/vguard_ups_ha",
     "issue_tracker": "https://github.com/dtechterminal/vguard_ups_ha/issues",
     "requirements": [],

@@ -45,9 +45,28 @@ ping vguardbox.com
 # Should resolve to your local MQTT broker IP
 ```
 
-### MQTT Broker
+### MQTT Broker Setup
 
-You need an MQTT broker running on your network (e.g., Mosquitto). The V-Guard inverter will connect to it on port 1883.
+You need an MQTT broker running on your network and configured in Home Assistant:
+
+1. **Install Mosquitto** (if not already installed):
+   - Add-on method: Install "Mosquitto broker" from Home Assistant add-ons
+   - Or run Mosquitto separately on your network
+
+2. **Configure MQTT in Home Assistant**:
+   - Go to **Settings** → **Devices & Services**
+   - Click **Add Integration** → Search for "MQTT"
+   - Configure broker settings:
+     - Broker: IP where Mosquitto is running (e.g., `192.168.0.4` or `localhost` if using add-on)
+     - Port: `1883`
+     - Leave username/password blank if not configured
+
+3. **Verify MQTT is working**:
+   - Go to **Developer Tools** → **MQTT**
+   - Try listening to topic: `device/dups/CE01/#`
+   - You should see messages from your inverter
+
+**Important**: The MQTT broker configured in Home Assistant must be the same one your inverter connects to (via DNS redirect).
 
 ## Installation
 
@@ -112,6 +131,12 @@ You need an MQTT broker running on your network (e.g., Mosquitto). The V-Guard i
 
 ## Recent Changes
 
+### Version 2.2.1
+- **Better Error Handling**: Enhanced MQTT subscription error handling
+- **Improved Logging**: More detailed debug messages for troubleshooting
+- **Documentation**: Added MQTT broker setup guide and testing documentation
+- **Test Script**: Included test_discovery.py for local testing before deployment
+
 ### Version 2.2.0
 - **Improved Discovery**: Better MQTT topic handling for both telemetry and LWT messages
 - **DNS Setup Guide**: Added detailed instructions for redirecting vguardbox.com to local MQTT broker
@@ -162,7 +187,7 @@ You need an MQTT broker running on your network (e.g., Mosquitto). The V-Guard i
    ```
    You should see messages like `device/dups/CE01/{serial}`
 
-3. **Enable Debug Logging**: Add to your `configuration.yaml`:
+3. **Enable Debug Logging**: Add to your `configuration.yaml` and restart HA:
    ```yaml
    logger:
      default: info
@@ -170,6 +195,12 @@ You need an MQTT broker running on your network (e.g., Mosquitto). The V-Guard i
        custom_components.vguard_inverter: debug
        homeassistant.components.mqtt: debug
    ```
+
+   Then check logs at **Settings** → **System** → **Logs** and look for:
+   - `"Starting MQTT discovery"` - Discovery started
+   - `"Received discovery message"` - Messages are being received
+   - `"Discovered V-Guard inverter"` - Device found
+   - Any error messages
 
 4. **Check MQTT Integration**: Ensure Home Assistant's MQTT integration is configured and connected
 
