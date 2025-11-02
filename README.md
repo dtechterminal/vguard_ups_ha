@@ -36,7 +36,9 @@ This integration allows you to monitor and control your V-Guard Inverter from Ho
 1. Go to Configuration > Integrations
 2. Click the "+" button to add a new integration
 3. Search for "V-Guard Inverter"
-4. Enter your inverter's IP address, MQTT port, and serial number
+4. Choose setup method:
+   - **Automatic Discovery (Recommended)**: The integration will automatically scan for V-Guard inverters on your MQTT broker
+   - **Manual Configuration**: Enter your inverter's IP address, MQTT port, and serial number manually
 5. Click "Submit"
 
 ## Available Entities
@@ -73,6 +75,11 @@ This integration allows you to monitor and control your V-Guard Inverter from Ho
 | Battery Type Lock | Lock/unlock battery type switching | mdi:lock | Switch |
 
 ## Recent Changes
+
+### Version 2.1.0
+- **Automatic Device Discovery**: Integration now automatically detects V-Guard inverters on MQTT
+- **Improved Setup Flow**: Choose between automatic discovery or manual configuration
+- **Better User Experience**: No need to manually enter serial numbers - just select from discovered devices
 
 ### Version 2.0.0
 - **Major Refactoring**: Completely rebuilt to follow modern Home Assistant patterns

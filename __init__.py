@@ -36,7 +36,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         manufacturer=MANUFACTURER,
         model=MODEL,
         name=f"V-Guard Inverter {serial[-6:]}",
-        sw_version="1.0.3",
+        sw_version="2.1.0",
     )
 
     # Store configuration for platforms

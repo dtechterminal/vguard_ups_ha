@@ -3,7 +3,22 @@
     "step": {
       "user": {
         "title": "V-Guard Inverter Setup",
-        "description": "Configure your V-Guard Inverter connection.",
+        "description": "Choose how to add your V-Guard Inverter.",
+        "menu_options": {
+          "mqtt_discovery": "Automatic Discovery (Recommended)",
+          "manual": "Manual Configuration"
+        }
+      },
+      "mqtt_discovery": {
+        "title": "Discover V-Guard Inverters",
+        "description": "Listening for V-Guard inverters on MQTT... This will take up to 30 seconds. Found {device_count} device(s).",
+        "data": {
+          "device": "Select Device"
+        }
+      },
+      "manual": {
+        "title": "Manual V-Guard Inverter Configuration",
+        "description": "Enter the device information to set up your V-Guard Inverter.",
         "data": {
           "host": "MQTT Broker IP Address",
           "port": "MQTT Port",
@@ -19,7 +34,9 @@
     "error": {
       "cannot_connect": "Failed to connect to the inverter",
       "invalid_auth": "Invalid authentication",
-      "unknown": "Unexpected error occurred"
+      "unknown": "Unexpected error occurred",
+      "no_devices_found": "No V-Guard inverters found. Make sure your device is connected and sending telemetry messages.",
+      "discovery_failed": "Failed to discover devices via MQTT"
     },
     "abort": {
       "already_configured": "This device is already configured"
