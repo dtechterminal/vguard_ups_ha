@@ -74,6 +74,16 @@ This integration allows you to monitor and control your V-Guard Inverter from Ho
 
 ## Recent Changes
 
+### Version 2.0.0
+- **Major Refactoring**: Completely rebuilt to follow modern Home Assistant patterns
+- **MQTT Integration**: Now uses Home Assistant's built-in MQTT component instead of paho-mqtt
+- **Better Async Support**: All entities use proper async/await patterns
+- **Improved Device Registry**: Better device information and organization
+- **Translation Support**: Added strings.json and translations for better UI
+- **Cleaner Code**: Simplified entity management with better separation of concerns
+- **Enhanced Error Handling**: Better logging and error recovery
+- **Type Hints**: Added proper type annotations for better code quality
+
 ### Version 1.0.3
 - Extended graphical history display to more sensors (WiFi signal, temperature, battery, energy)
 - Fixed Wi-Fi MAC address formatting to display in standard colon-separated format
@@ -81,23 +91,6 @@ This integration allows you to monitor and control your V-Guard Inverter from Ho
 - Fixed Performance level and Load alarm Threshold "unknown" states
 - Combined duplicate switches and sensors for cleaner interface
 - Updated documentation with entity types and improved descriptions
-
-### Version 1.0.2
-- Added graphical history display for voltage and ampere sensors
-- Updated documentation to indicate which sensors support graph display
-- Added Charging Current sensor to the documentation
-
-### Version 1.0.1
-- Added appropriate icons for all entities
-- Removed hardcoded configuration values
-- Made the integration HACS compatible
-- Added V-Guard logo as integration icon
-- Improved thread safety to prevent Home Assistant crashes
-
-### Version 1.0.0
-- Initial release
-- Basic monitoring and control capabilities
-- MQTT communication with the inverter
 
 ## Troubleshooting
 

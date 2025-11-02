@@ -1,0 +1,28 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "V-Guard Inverter Setup",
+        "description": "Configure your V-Guard Inverter connection.",
+        "data": {
+          "host": "MQTT Broker IP Address",
+          "port": "MQTT Port",
+          "token": "Serial Number"
+        },
+        "data_description": {
+          "host": "The IP address of your V-Guard Inverter (e.g., 192.168.0.4)",
+          "port": "The MQTT port number (usually 8883)",
+          "token": "The serial number of your V-Guard Inverter"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect to the inverter",
+      "invalid_auth": "Invalid authentication",
+      "unknown": "Unexpected error occurred"
+    },
+    "abort": {
+      "already_configured": "This device is already configured"
+    }
+  }
+}
