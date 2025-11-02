@@ -118,4 +118,3 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ## Credits
 
 - Thanks to the Home Assistant community for their support and guidance
-- V-Guard for making their inverter MQTT API available
