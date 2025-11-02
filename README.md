@@ -13,6 +13,42 @@ This integration allows you to monitor and control your V-Guard Inverter from Ho
 - **Thread-safe implementation** to prevent Home Assistant crashes
 - **HACS compatible** for easy installation and updates
 
+## Prerequisites
+
+### DNS Setup (Required)
+
+V-Guard inverters try to connect to `vguardbox.com` for their cloud service. To use this local integration, you need to redirect this domain to your local MQTT broker.
+
+**Option 1: Using Pi-hole or AdGuard Home**
+1. Go to your Pi-hole/AdGuard admin panel
+2. Navigate to Local DNS → DNS Records (or Custom filtering → DNS rewrites)
+3. Add a new record:
+   - Domain: `vguardbox.com`
+   - IP Address: `192.168.0.4` (or your MQTT broker IP)
+4. Save the record
+
+**Option 2: Router DNS Override**
+1. Access your router's admin panel
+2. Look for DNS settings or Local DNS
+3. Add a static DNS entry for `vguardbox.com` pointing to your MQTT broker IP
+4. Save and restart your router if needed
+
+**Option 3: /etc/hosts file** (for testing only)
+Add to your `/etc/hosts` file:
+```
+192.168.0.4  vguardbox.com
+```
+
+**Verify DNS Setup:**
+```bash
+ping vguardbox.com
+# Should resolve to your local MQTT broker IP
+```
+
+### MQTT Broker
+
+You need an MQTT broker running on your network (e.g., Mosquitto). The V-Guard inverter will connect to it on port 1883.
+
 ## Installation
 
 ### HACS Installation (Recommended)
@@ -76,6 +112,13 @@ This integration allows you to monitor and control your V-Guard Inverter from Ho
 
 ## Recent Changes
 
+### Version 2.2.0
+- **Improved Discovery**: Better MQTT topic handling for both telemetry and LWT messages
+- **DNS Setup Guide**: Added detailed instructions for redirecting vguardbox.com to local MQTT broker
+- **Better Logging**: Enhanced debug logging for troubleshooting discovery issues
+- **Validation**: Added serial number validation during discovery
+- **Prerequisites Section**: Documented required DNS and MQTT setup
+
 ### Version 2.1.1
 - **Fixed Default Port**: Changed default MQTT port from 8883 to 1883 (standard MQTT port)
 - **Tested with Real Device**: Verified working with actual V-Guard inverter hardware
@@ -105,18 +148,42 @@ This integration allows you to monitor and control your V-Guard Inverter from Ho
 
 ## Troubleshooting
 
-If you encounter any issues:
+### Automatic Discovery Not Finding Devices
 
-1. Enable debug logging by adding the following to your `configuration.yaml`:
+1. **Verify DNS Setup**: Make sure `vguardbox.com` resolves to your MQTT broker
+   ```bash
+   ping vguardbox.com
+   # Should show your MQTT broker IP (e.g., 192.168.0.4)
+   ```
+
+2. **Check MQTT Messages**: Verify the inverter is publishing data
+   ```bash
+   mosquitto_sub -h 192.168.0.4 -p 1883 -t "device/dups/CE01/#" -v
+   ```
+   You should see messages like `device/dups/CE01/{serial}`
+
+3. **Enable Debug Logging**: Add to your `configuration.yaml`:
    ```yaml
    logger:
      default: info
      logs:
        custom_components.vguard_inverter: debug
+       homeassistant.components.mqtt: debug
    ```
-2. Check that your inverter is connected to the same network
-3. Verify that the MQTT connection is working
-4. Check the Home Assistant logs for error messages
+
+4. **Check MQTT Integration**: Ensure Home Assistant's MQTT integration is configured and connected
+
+5. **Use Manual Configuration**: If discovery fails, you can manually enter:
+   - Host: Your MQTT broker IP (e.g., `192.168.0.4`)
+   - Port: `1883`
+   - Serial: Your inverter serial number (visible in MQTT topic)
+
+### Other Issues
+
+1. Check that your inverter is connected to the same network
+2. Verify that the MQTT broker is running and accessible
+3. Check the Home Assistant logs for error messages
+4. Restart the inverter if needed
 
 ## Support
 

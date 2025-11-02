@@ -112,62 +112,84 @@ class VGuardInverterConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     async def _discover_devices(self):
         """Discover V-Guard inverters via MQTT."""
         discovered = {}
-        discovery_topic = "device/dups/CE01/+"
+        discovery_topic = "device/dups/CE01/#"  # Changed from + to # to catch all subtopics
+
+        _LOGGER.info("Starting MQTT discovery on topic: %s", discovery_topic)
 
         @callback
         def message_received(msg):
             """Handle received MQTT message."""
             try:
-                # Extract serial from topic: device/dups/CE01/{serial}
+                _LOGGER.debug("Received discovery message on topic: %s", msg.topic)
+
+                # Extract serial from topic: device/dups/CE01/{serial} or device/dups/CE01/lwt/{serial}
                 topic_parts = msg.topic.split("/")
-                if len(topic_parts) >= 4:
+
+                # Handle both telemetry and LWT topics
+                if "lwt" in topic_parts:
+                    # LWT topic: device/dups/CE01/lwt/{serial}
+                    if len(topic_parts) >= 5:
+                        serial = topic_parts[4]
+                        _LOGGER.debug("Found serial from LWT topic: %s", serial)
+                elif len(topic_parts) >= 4:
+                    # Telemetry topic: device/dups/CE01/{serial}
                     serial = topic_parts[3]
+                    _LOGGER.debug("Found serial from telemetry topic: %s", serial)
+                else:
+                    _LOGGER.debug("Topic format not recognized: %s", msg.topic)
+                    return
 
-                    # Parse payload to get additional info if available
-                    try:
-                        payload = json.loads(msg.payload)
-                        # Unwrap if nested
-                        if len(payload) == 1 and isinstance(next(iter(payload.values())), dict):
-                            payload = next(iter(payload.values()))
-
-                        # Extract host from payload if available (VG011 might contain this)
-                        host = payload.get("host", "192.168.0.4")
-                        port = payload.get("port", 1883)
-                    except (json.JSONDecodeError, AttributeError):
-                        # Default values if payload parsing fails
+                # Don't add duplicates and validate serial number
+                if serial and serial not in discovered and len(serial) > 5:
+                    # Get MQTT broker config from Home Assistant's MQTT integration
+                    mqtt_data = self.hass.data.get("mqtt")
+                    if mqtt_data:
+                        # Try to get broker from MQTT config
+                        host = "192.168.0.4"  # Default fallback
+                        port = 1883
+                    else:
                         host = "192.168.0.4"
                         port = 1883
 
-                    # Store discovered device
-                    if serial not in discovered:
-                        discovered[serial] = {
-                            CONF_HOST: host,
-                            CONF_PORT: port,
-                            CONF_TOKEN: serial,
-                        }
-                        _LOGGER.debug("Discovered V-Guard inverter: %s", serial)
+                    discovered[serial] = {
+                        CONF_HOST: host,
+                        CONF_PORT: port,
+                        CONF_TOKEN: serial,
+                    }
+                    _LOGGER.info("✓ Discovered V-Guard inverter: %s", serial)
 
             except Exception as err:
-                _LOGGER.debug("Error processing discovery message: %s", err)
+                _LOGGER.error("Error processing discovery message: %s", err, exc_info=True)
 
         try:
+            # Check if MQTT is available
+            if "mqtt" not in self.hass.data:
+                _LOGGER.error("MQTT integration is not set up in Home Assistant")
+                return {}
+
             # Subscribe to discovery topic
+            _LOGGER.info("Subscribing to MQTT topic for discovery...")
             unsubscribe = await mqtt.async_subscribe(
                 self.hass, discovery_topic, message_received, 1
             )
 
-            # Wait for discovery timeout
-            await asyncio.sleep(DISCOVERY_TIMEOUT)
+            # Wait for discovery timeout with progress logging
+            _LOGGER.info("Listening for devices (30 seconds)...")
+            for i in range(6):
+                await asyncio.sleep(5)
+                _LOGGER.debug("Discovery progress: %d/%d seconds, found %d device(s)",
+                            (i+1)*5, DISCOVERY_TIMEOUT, len(discovered))
 
             # Unsubscribe
             unsubscribe()
 
             self.discovered_devices = discovered
-            _LOGGER.info("Discovery complete. Found %d device(s)", len(discovered))
+            _LOGGER.info("Discovery complete. Found %d device(s): %s",
+                        len(discovered), list(discovered.keys()))
             return discovered
 
         except Exception as err:
-            _LOGGER.error("Discovery failed: %s", err)
+            _LOGGER.error("Discovery failed: %s", err, exc_info=True)
             return {}
 
     async def async_step_import(self, import_data):
