@@ -2,7 +2,7 @@
 import json
 import logging
 import datetime
-from typing import Any
+from typing import Any, Callable, Optional
 
 from homeassistant.components import mqtt
 from homeassistant.components.sensor import SensorDeviceClass, SensorEntity, SensorStateClass
@@ -94,9 +94,9 @@ class VGuardSensor(SensorEntity):
         sensor_key: str,
         sensor_name: str,
         sensor_icon: str,
-        device_class: SensorDeviceClass | None,
-        state_class: SensorStateClass | None,
-        transform: callable | None,
+        device_class: Optional[SensorDeviceClass],
+        state_class: Optional[SensorStateClass],
+        transform: Optional[Callable],
     ) -> None:
         """Initialize the sensor."""
         self.hass = hass

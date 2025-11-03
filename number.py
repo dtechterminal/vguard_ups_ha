@@ -1,6 +1,7 @@
 """Number platform for V-Guard Inverter."""
 import json
 import logging
+from typing import Optional
 
 from homeassistant.components import mqtt
 from homeassistant.components.number import NumberEntity
