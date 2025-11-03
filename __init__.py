@@ -1,5 +1,6 @@
 """The V-Guard Inverter integration."""
 import logging
+from homeassistant.components import mqtt
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_HOST, CONF_PORT, CONF_TOKEN, Platform
 from homeassistant.core import HomeAssistant
@@ -36,7 +37,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         manufacturer=MANUFACTURER,
         model=MODEL,
         name=f"V-Guard Inverter {serial[-6:]}",
-        sw_version="2.2.2",
+        sw_version="2.2.3",
     )
 
     # Store configuration for platforms
@@ -54,7 +55,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     # Publish initial start command via MQTT
     try:
-        await hass.components.mqtt.async_publish(
+        await mqtt.async_publish(
             hass,
             TOPIC_CONTROL.format(serial=serial),
             "start",

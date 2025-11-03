@@ -111,6 +111,7 @@ class VGuardSensor(SensorEntity):
         self._attr_device_class = device_class
         self._attr_state_class = state_class
         self._attr_native_value = None
+        self._attr_available = False  # Will be True once we receive data
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, serial)},
             name=f"V-Guard Inverter {serial[-6:]}",
@@ -144,6 +145,7 @@ class VGuardSensor(SensorEntity):
                     else:
                         self._attr_native_value = value
 
+                    self._attr_available = True  # Mark as available once we have data
                     self.async_write_ha_state()
                     _LOGGER.debug("Updated %s to %s", self._key, self._attr_native_value)
 

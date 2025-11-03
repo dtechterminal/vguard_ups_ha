@@ -87,6 +87,7 @@ class VGuardNumber(NumberEntity):
         self._attr_name = number_name
         self._attr_unique_id = f"{DOMAIN}_{serial}_{number_key}"
         self._attr_icon = number_icon
+        self._attr_available = False  # Will be True once we receive data
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, serial)},
             name=f"V-Guard Inverter {serial[-6:]}",
@@ -115,6 +116,7 @@ class VGuardNumber(NumberEntity):
                         float_value = float(value)
                         if self._attr_native_min_value <= float_value <= self._attr_native_max_value:
                             self._attr_native_value = float_value
+                            self._attr_available = True  # Mark as available once we have data
                             self.async_write_ha_state()
                             _LOGGER.debug("Updated %s to %s", self._vg_code, float_value)
                         else:

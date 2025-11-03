@@ -87,6 +87,7 @@ class VGuardSwitch(SwitchEntity):
         self._attr_unique_id = f"{DOMAIN}_{serial}_{switch_key}"
         self._attr_icon = switch_icon
         self._attr_is_on = False
+        self._attr_available = False  # Will be True once we receive data
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, serial)},
             name=f"V-Guard Inverter {serial[-6:]}",
@@ -121,6 +122,7 @@ class VGuardSwitch(SwitchEntity):
                         )
                         return
 
+                    self._attr_available = True  # Mark as available once we have data
                     self.async_write_ha_state()
                     _LOGGER.debug("Updated %s to %s", self._vg_code, self._attr_is_on)
 

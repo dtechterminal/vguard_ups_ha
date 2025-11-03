@@ -131,6 +131,11 @@ You need an MQTT broker running on your network and configured in Home Assistant
 
 ## Recent Changes
 
+### Version 2.2.3
+- **Fixed MQTT Publishing**: Corrected MQTT API usage in `__init__.py` for start command
+- **Entity Availability**: Added proper availability tracking - entities now show as available once they receive data
+- **All Entities Working**: Sensors, switches, selects, and numbers now properly update from MQTT messages
+
 ### Version 2.2.2
 - **Critical Fix**: Fixed type hint syntax errors that prevented entities from loading
 - Changed `callable | None` to `Optional[Callable]` for Python 3.9+ compatibility
