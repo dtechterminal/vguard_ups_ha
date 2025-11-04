@@ -87,7 +87,8 @@ class VGuardSwitch(SwitchEntity):
         self._attr_unique_id = f"{DOMAIN}_{serial}_{switch_key}"
         self._attr_icon = switch_icon
         self._attr_is_on = False
-        self._attr_available = False  # Will be True once we receive data
+        self._attr_available = False  # Will be True once we receive any MQTT message
+        self._has_received_message = False
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, serial)},
             name=f"V-Guard Inverter {serial[-6:]}",
@@ -109,6 +110,12 @@ class VGuardSwitch(SwitchEntity):
                 if len(payload) == 1 and isinstance(next(iter(payload.values())), dict):
                     payload = next(iter(payload.values()))
 
+                # Mark entity as available after receiving first message
+                if not self._has_received_message:
+                    self._has_received_message = True
+                    self._attr_available = True
+                    _LOGGER.debug("Entity %s is now available", self._vg_code)
+
                 # Update switch state if key exists in payload
                 if self._vg_code in payload:
                     value = payload[self._vg_code]
@@ -120,11 +127,14 @@ class VGuardSwitch(SwitchEntity):
                         _LOGGER.warning(
                             "Unexpected value '%s' for switch %s", value, self._vg_code
                         )
-                        return
+                        # Don't return, still write state to show entity is available
 
-                    self._attr_available = True  # Mark as available once we have data
                     self.async_write_ha_state()
                     _LOGGER.debug("Updated %s to %s", self._vg_code, self._attr_is_on)
+                elif self._has_received_message:
+                    # Entity is available but value not in this message
+                    # Still write state to ensure availability is reflected
+                    self.async_write_ha_state()
 
             except json.JSONDecodeError as err:
                 _LOGGER.error("Failed to decode JSON: %s", err)

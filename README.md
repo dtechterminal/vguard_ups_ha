@@ -131,6 +131,11 @@ You need an MQTT broker running on your network and configured in Home Assistant
 
 ## Recent Changes
 
+### Version 2.2.4
+- **Fixed Unknown Values**: Entities now become available after receiving first MQTT message, even if their specific value isn't in that message
+- **Better Availability Logic**: All entities (sensors, switches, selects, numbers) now properly show as available instead of unknown
+- **Improved User Experience**: Entities will show their last known value or default instead of remaining unavailable indefinitely
+
 ### Version 2.2.3
 - **Fixed MQTT Publishing**: Corrected MQTT API usage in `__init__.py` for start command
 - **Entity Availability**: Added proper availability tracking - entities now show as available once they receive data

@@ -111,7 +111,8 @@ class VGuardSensor(SensorEntity):
         self._attr_device_class = device_class
         self._attr_state_class = state_class
         self._attr_native_value = None
-        self._attr_available = False  # Will be True once we receive data
+        self._attr_available = False  # Will be True once we receive any MQTT message
+        self._has_received_message = False
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, serial)},
             name=f"V-Guard Inverter {serial[-6:]}",
@@ -133,6 +134,12 @@ class VGuardSensor(SensorEntity):
                 if len(payload) == 1 and isinstance(next(iter(payload.values())), dict):
                     payload = next(iter(payload.values()))
 
+                # Mark entity as available after receiving first message
+                if not self._has_received_message:
+                    self._has_received_message = True
+                    self._attr_available = True
+                    _LOGGER.debug("Entity %s is now available", self._key)
+
                 # Update sensor value if key exists in payload
                 if self._key in payload:
                     value = payload[self._key]
@@ -145,9 +152,12 @@ class VGuardSensor(SensorEntity):
                     else:
                         self._attr_native_value = value
 
-                    self._attr_available = True  # Mark as available once we have data
                     self.async_write_ha_state()
                     _LOGGER.debug("Updated %s to %s", self._key, self._attr_native_value)
+                elif self._has_received_message:
+                    # Entity is available but value not in this message
+                    # Still write state to ensure availability is reflected
+                    self.async_write_ha_state()
 
             except json.JSONDecodeError as err:
                 _LOGGER.error("Failed to decode JSON: %s", err)

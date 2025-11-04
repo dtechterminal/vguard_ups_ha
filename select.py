@@ -83,7 +83,8 @@ class VGuardSelect(SelectEntity):
         self._attr_name = select_name
         self._attr_unique_id = f"{DOMAIN}_{serial}_{select_key}"
         self._attr_icon = select_icon
-        self._attr_available = False  # Will be True once we receive data
+        self._attr_available = False  # Will be True once we receive any MQTT message
+        self._has_received_message = False
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, serial)},
             name=f"V-Guard Inverter {serial[-6:]}",
@@ -105,6 +106,12 @@ class VGuardSelect(SelectEntity):
                 if len(payload) == 1 and isinstance(next(iter(payload.values())), dict):
                     payload = next(iter(payload.values()))
 
+                # Mark entity as available after receiving first message
+                if not self._has_received_message:
+                    self._has_received_message = True
+                    self._attr_available = True
+                    _LOGGER.debug("Entity %s is now available", self._vg_code)
+
                 # Update select state if key exists in payload
                 if self._vg_code in payload:
                     value = payload[self._vg_code]
@@ -113,7 +120,6 @@ class VGuardSelect(SelectEntity):
                         if value in self._values:
                             index = self._values.index(value)
                             self._attr_current_option = self._options[index]
-                            self._attr_available = True  # Mark as available once we have data
                             self.async_write_ha_state()
                             _LOGGER.debug(
                                 "Updated %s to %s", self._vg_code, self._attr_current_option
@@ -125,6 +131,12 @@ class VGuardSelect(SelectEntity):
                             value,
                             err,
                         )
+                        # Still write state to show entity is available
+                        self.async_write_ha_state()
+                elif self._has_received_message:
+                    # Entity is available but value not in this message
+                    # Still write state to ensure availability is reflected
+                    self.async_write_ha_state()
 
             except json.JSONDecodeError as err:
                 _LOGGER.error("Failed to decode JSON: %s", err)
