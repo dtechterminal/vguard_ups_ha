@@ -1,239 +1,107 @@
-# V-Guard Inverter Integration for Home Assistant
+# V-Guard Inverter for Home Assistant
 
-![V-Guard Logo](icon.png)
+Monitor and configure a V-Guard Wi-Fi smart inverter from Home Assistant over your own MQTT broker, without the V-Guard cloud.
 
-This integration allows you to monitor and control your V-Guard Inverter from Home Assistant using MQTT.
+This is an independent community integration. It is not made, supported or endorsed by V-Guard Industries.
 
 ## Features
 
-- **Real-time monitoring** of inverter status, battery levels, and power metrics
-- **Control capabilities** for inverter settings and modes
-- **Intuitive icons** for all entities to improve dashboard visualization
-- **Graphical history display** for voltage, ampere, signal strength, temperature, battery, and energy sensors using Home Assistant's built-in graphs
-- **Thread-safe implementation** to prevent Home Assistant crashes
-- **HACS compatible** for easy installation and updates
+- **Local push.** Readings arrive over MQTT every couple of seconds; nothing is polled from the cloud.
+- **Power:** mains and output voltage, output frequency, load, and whether the house runs on mains or battery.
+- **Battery:** voltage, charging current, status, health, capacity and the estimated backup time.
+- **Backup energy:** a running total of energy supplied from the battery, usable in the Energy dashboard.
+- **Settings:** inverter mode (Normal, UPS, Equipment), turbo charging, mains changeover buzzer, appliance mode, daytime load usage, performance level and load alarm threshold.
+- **Discovery:** finds inverters on the broker during setup.
+- **Availability:** entities go unavailable when the inverter drops off the broker or stops reporting.
 
-## Prerequisites
+## Requirements
 
-### DNS Setup (Required)
+- Home Assistant 2025.3 or newer, with the [MQTT integration](https://www.home-assistant.io/integrations/mqtt/) set up.
+- An MQTT broker on your network (for example the Mosquitto add-on), listening on port 1883.
+- A DNS server you control (AdGuard Home, Pi-hole or your router) that the inverter uses.
+- A V-Guard smart inverter already connected to your Wi-Fi with the V-Guard app.
 
-V-Guard inverters try to connect to `vguardbox.com` for their cloud service. To use this local integration, you need to redirect this domain to your local MQTT broker.
+## Point the inverter at your broker
 
-**Option 1: Using Pi-hole or AdGuard Home**
-1. Go to your Pi-hole/AdGuard admin panel
-2. Navigate to Local DNS → DNS Records (or Custom filtering → DNS rewrites)
-3. Add a new record:
-   - Domain: `vguardbox.com`
-   - IP Address: `192.168.0.4` (or your MQTT broker IP)
-4. Save the record
+The inverter's Wi-Fi module connects to `vguardbox.com` on port 1883 (plain MQTT). Redirect that name to your broker:
 
-**Option 2: Router DNS Override**
-1. Access your router's admin panel
-2. Look for DNS settings or Local DNS
-3. Add a static DNS entry for `vguardbox.com` pointing to your MQTT broker IP
-4. Save and restart your router if needed
+- **AdGuard Home:** Filters → DNS rewrites → add `vguardbox.com` → your broker's IP.
+- **Pi-hole:** Local DNS → DNS Records → add `vguardbox.com` → your broker's IP.
+- **Router:** add a static DNS entry for `vguardbox.com` pointing at your broker.
 
-**Option 3: /etc/hosts file** (for testing only)
-Add to your `/etc/hosts` file:
-```
-192.168.0.4  vguardbox.com
-```
+Then power-cycle the inverter, or wait for it to reconnect. To check it worked, listen on the broker:
 
-**Verify DNS Setup:**
 ```bash
-ping vguardbox.com
-# Should resolve to your local MQTT broker IP
+mosquitto_sub -h <broker-ip> -t 'device/dups/#' -v
 ```
 
-### MQTT Broker Setup
+You should see `device/dups/CE01/lwt/<serial> online` within a minute. Telemetry starts once Home Assistant asks for it.
 
-You need an MQTT broker running on your network and configured in Home Assistant:
-
-1. **Install Mosquitto** (if not already installed):
-   - Add-on method: Install "Mosquitto broker" from Home Assistant add-ons
-   - Or run Mosquitto separately on your network
-
-2. **Configure MQTT in Home Assistant**:
-   - Go to **Settings** → **Devices & Services**
-   - Click **Add Integration** → Search for "MQTT"
-   - Configure broker settings:
-     - Broker: IP where Mosquitto is running (e.g., `192.168.0.4` or `localhost` if using add-on)
-     - Port: `1883`
-     - Leave username/password blank if not configured
-
-3. **Verify MQTT is working**:
-   - Go to **Developer Tools** → **MQTT**
-   - Try listening to topic: `device/dups/CE01/#`
-   - You should see messages from your inverter
-
-**Important**: The MQTT broker configured in Home Assistant must be the same one your inverter connects to (via DNS redirect).
+The V-Guard app stops working remotely while the inverter talks to your broker instead of the cloud.
 
 ## Installation
 
-### HACS Installation (Recommended)
+### With HACS (recommended)
 
-1. Open HACS in your Home Assistant instance
-2. Go to "Integrations"
-3. Click the three dots in the top right corner and select "Custom repositories"
-4. Add this repository URL and select "Integration" as the category
-5. Click "Add"
-6. Search for "V-Guard Inverter" and install it
-7. Restart Home Assistant
+1. Open **HACS** in Home Assistant.
+2. Search for **V-Guard Inverter**, open it, and click **Download**.
+3. **Restart Home Assistant.**
 
-### Manual Installation
+Not listed yet? Open **HACS → ⋮ → Custom repositories**, add `https://github.com/dtechterminal/vguard_ups_ha` as an **Integration**, then search again.
 
-1. Download the latest release
-2. Copy the `vguard_inverter` folder to your `custom_components` directory
-3. Restart Home Assistant
+### Manually
 
-## Configuration
+Download the source code of the [latest release](https://github.com/dtechterminal/vguard_ups_ha/releases/latest), copy its `custom_components/vguard_inverter` folder into your Home Assistant `config/custom_components/` folder, and restart Home Assistant.
 
-1. Go to Configuration > Integrations
-2. Click the "+" button to add a new integration
-3. Search for "V-Guard Inverter"
-4. Choose setup method:
-   - **Automatic Discovery (Recommended)**: The integration will automatically scan for V-Guard inverters on your MQTT broker
-   - **Manual Configuration**: Enter your inverter's IP address, MQTT port, and serial number manually
-5. Click "Submit"
+## Setup
 
-## Available Entities
+1. Go to **Settings → Devices & services → Add integration** and choose **V-Guard Inverter**.
+2. Choose **Find inverters on MQTT**. Setup listens on the broker for a few seconds and lists the inverters it heard.
+3. Pick your inverter.
 
-### Sensors
+If nothing is found, choose **Enter the serial number** instead. The serial number is the last part of the inverter's topic, `device/dups/CE01/<serial>`.
 
-| Entity | Description | Icon | Graph Display |
-|--------|-------------|------|--------------|
-| Wi-Fi Signal | Signal strength of the inverter's Wi-Fi connection | mdi:wifi | Yes |
-| Temperature | Inverter temperature | mdi:thermometer | Yes |
-| Battery Voltage | Current battery voltage | mdi:battery-outline | Yes |
-| Battery Percentage | Current battery charge level | mdi:battery-charging-outline | Yes |
-| Input Voltage | Input voltage from the mains | mdi:flash | Yes |
-| Output Voltage | Output voltage to connected devices | mdi:flash-outline | Yes |
-| Charging Current | Current flowing to the battery | mdi:current-ac | Yes |
-| Total Energy | Total energy consumption | mdi:lightning-bolt | Yes |
-| Energy Usage | Current energy usage | mdi:power-plug | Yes |
-| System Uptime | Time since last restart | mdi:timer-outline | No |
-| Battery Health | Health status of the battery | mdi:heart-pulse | No |
-| Wi-Fi MAC ID | MAC address of the inverter's Wi-Fi module | mdi:access-point-network | No |
+## Entities
 
-### Controls
+| Entity | Type | Notes |
+|---|---|---|
+| Mains voltage, Output voltage | Sensor | V |
+| Output frequency | Sensor | Hz |
+| Load | Sensor | % of the inverter's rating; 0 while on mains |
+| Power source | Sensor | Mains or Battery |
+| Battery voltage, Charging current | Sensor | V, A |
+| Battery status | Sensor | Normal, Charging or Low |
+| Battery health | Sensor | % |
+| Backup time | Sensor | Estimated minutes on battery at the current load |
+| Backup energy used | Sensor | Wh supplied from the battery, total increasing |
+| Battery capacity, Low battery alarm voltage | Sensor | Diagnostic |
+| Wi-Fi signal, Wi-Fi network | Sensor | Diagnostic, disabled by default |
+| Inverter mode | Select | Normal, UPS or Equipment |
+| Turbo charging, Mains changeover buzzer, Appliance mode, Daytime load usage | Switch | Inverter settings |
+| Performance level, Load alarm threshold | Number | Inverter settings |
 
-| Entity | Description | Icon | Type |
-|--------|-------------|------|------|
-| Inverter Mode | Select between Normal, UPS, or Equipment modes | mdi:home-lightning-bolt-outline | Select |
-| Performance Level | Adjust the performance level (1-7) | mdi:speedometer | Number |
-| Load Alarm Threshold | Set the threshold for load alarms (50-100%) | mdi:alert-circle-outline | Number |
-| Turbo Charging | Toggle turbo charging mode | mdi:battery-charging-high | Switch |
-| Advance Low Battery Alarm | Toggle advance low battery alarm | mdi:battery-alert | Switch |
-| Mains Changeover Buzzer | Toggle the buzzer for mains changeover | mdi:volume-high | Switch |
-| Appliance Mode | Toggle appliance mode | mdi:power-standby | Switch |
-| Daytime Load Usage | Toggle daytime load usage | mdi:weather-sunny | Switch |
-| Battery Type Lock | Lock/unlock battery type switching | mdi:lock | Switch |
+The firmware version and Wi-Fi MAC address appear on the device page.
 
-## Recent Changes
+## How it works
 
-### Version 2.2.3
-- **Fixed MQTT Publishing**: Corrected MQTT API usage in `__init__.py` for start command
-- **Entity Availability**: Added proper availability tracking - entities now show as available once they receive data
-- **All Entities Working**: Sensors, switches, selects, and numbers now properly update from MQTT messages
-
-### Version 2.2.2
-- **Critical Fix**: Fixed type hint syntax errors that prevented entities from loading
-- Changed `callable | None` to `Optional[Callable]` for Python 3.9+ compatibility
-- All platforms now load correctly and entities appear in Home Assistant
-
-### Version 2.2.1
-- **Better Error Handling**: Enhanced MQTT subscription error handling
-- **Improved Logging**: More detailed debug messages for troubleshooting
-- **Documentation**: Added MQTT broker setup guide and testing documentation
-- **Test Script**: Included test_discovery.py for local testing before deployment
-
-### Version 2.2.0
-- **Improved Discovery**: Better MQTT topic handling for both telemetry and LWT messages
-- **DNS Setup Guide**: Added detailed instructions for redirecting vguardbox.com to local MQTT broker
-- **Better Logging**: Enhanced debug logging for troubleshooting discovery issues
-- **Validation**: Added serial number validation during discovery
-- **Prerequisites Section**: Documented required DNS and MQTT setup
-
-### Version 2.1.1
-- **Fixed Default Port**: Changed default MQTT port from 8883 to 1883 (standard MQTT port)
-- **Tested with Real Device**: Verified working with actual V-Guard inverter hardware
-
-### Version 2.1.0
-- **Automatic Device Discovery**: Integration now automatically detects V-Guard inverters on MQTT
-- **Improved Setup Flow**: Choose between automatic discovery or manual configuration
-- **Better User Experience**: No need to manually enter serial numbers - just select from discovered devices
-
-### Version 2.0.0
-- **Major Refactoring**: Completely rebuilt to follow modern Home Assistant patterns
-- **MQTT Integration**: Now uses Home Assistant's built-in MQTT component instead of paho-mqtt
-- **Better Async Support**: All entities use proper async/await patterns
-- **Improved Device Registry**: Better device information and organization
-- **Translation Support**: Added strings.json and translations for better UI
-- **Cleaner Code**: Simplified entity management with better separation of concerns
-- **Enhanced Error Handling**: Better logging and error recovery
-- **Type Hints**: Added proper type annotations for better code quality
-
-### Version 1.0.3
-- Extended graphical history display to more sensors (WiFi signal, temperature, battery, energy)
-- Fixed Wi-Fi MAC address formatting to display in standard colon-separated format
-- Fixed Turbo charging icon display issue
-- Fixed Performance level and Load alarm Threshold "unknown" states
-- Combined duplicate switches and sensors for cleaner interface
-- Updated documentation with entity types and improved descriptions
+The inverter publishes a retained `online`/`offline` message on `device/dups/<model>/lwt/<serial>`. After it receives `start` on `apps/dups/<model>/<serial>` it streams telemetry on `device/dups/<model>/<serial>` for about four minutes. The integration sends `start` every minute so the stream never stops. Settings are changed by sending `<code>:<value>` (for example `VG099:1`) to the same topic, and the next telemetry confirms the change.
 
 ## Troubleshooting
 
-### Automatic Discovery Not Finding Devices
+- **No inverters found:** check that `vguardbox.com` resolves to your broker from the inverter's network, and that `mosquitto_sub` (above) shows the `lwt` topic.
+- **Entities unavailable:** the inverter is offline on the broker or has stopped streaming. Check its Wi-Fi and the broker.
+- **Debug logging:** add this to `configuration.yaml` and restart:
 
-1. **Verify DNS Setup**: Make sure `vguardbox.com` resolves to your MQTT broker
-   ```bash
-   ping vguardbox.com
-   # Should show your MQTT broker IP (e.g., 192.168.0.4)
-   ```
+  ```yaml
+  logger:
+    logs:
+      custom_components.vguard_inverter: debug
+  ```
 
-2. **Check MQTT Messages**: Verify the inverter is publishing data
-   ```bash
-   mosquitto_sub -h 192.168.0.4 -p 1883 -t "device/dups/CE01/#" -v
-   ```
-   You should see messages like `device/dups/CE01/{serial}`
+## Upgrading from 2.x
 
-3. **Enable Debug Logging**: Add to your `configuration.yaml` and restart HA:
-   ```yaml
-   logger:
-     default: info
-     logs:
-       custom_components.vguard_inverter: debug
-       homeassistant.components.mqtt: debug
-   ```
-
-   Then check logs at **Settings** → **System** → **Logs** and look for:
-   - `"Starting MQTT discovery"` - Discovery started
-   - `"Received discovery message"` - Messages are being received
-   - `"Discovered V-Guard inverter"` - Device found
-   - Any error messages
-
-4. **Check MQTT Integration**: Ensure Home Assistant's MQTT integration is configured and connected
-
-5. **Use Manual Configuration**: If discovery fails, you can manually enter:
-   - Host: Your MQTT broker IP (e.g., `192.168.0.4`)
-   - Port: `1883`
-   - Serial: Your inverter serial number (visible in MQTT topic)
-
-### Other Issues
-
-1. Check that your inverter is connected to the same network
-2. Verify that the MQTT broker is running and accessible
-3. Check the Home Assistant logs for error messages
-4. Restart the inverter if needed
-
-## Support
-
-If you need help or want to report a bug, please open an issue on GitHub.
+Version 3.0 rewrites the integration. Existing entries are migrated, but most entities are new because several 2.x sensors were mapped to the wrong values (for example "Battery Percentage" was the load). Remove old entities that show as unavailable, and update dashboards and automations to the new entity IDs.
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Credits
-
-- Thanks to the Home Assistant community for their support and guidance
+The code is MIT licensed. The V-Guard name and logo belong to V-Guard Industries; see [docs/branding.md](docs/branding.md).

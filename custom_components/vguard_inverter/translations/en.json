@@ -1,0 +1,95 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Add a V-Guard inverter",
+        "description": "The inverter must be connected to the same MQTT broker as Home Assistant. See the README for the DNS redirect it needs.",
+        "menu_options": {
+          "mqtt_discovery": "Find inverters on MQTT",
+          "manual": "Enter the serial number"
+        }
+      },
+      "pick_device": {
+        "title": "Choose an inverter",
+        "description": "Found {device_count} inverter(s) on the MQTT broker.",
+        "data": {
+          "serial": "Inverter"
+        }
+      },
+      "manual": {
+        "title": "Enter the inverter's serial number",
+        "description": "The serial number is the last part of the inverter's MQTT topic, after `device/dups/CE01/`.",
+        "data": {
+          "serial": "Serial number",
+          "model": "Model code"
+        },
+        "data_description": {
+          "model": "The part of the topic before the serial number. CE01 for current inverters."
+        }
+      }
+    },
+    "progress": {
+      "discovering": "Listening for V-Guard inverters on MQTT…"
+    },
+    "error": {
+      "no_devices_found": "No new V-Guard inverters were heard on MQTT. Check the DNS redirect, or enter the serial number.",
+      "invalid_serial": "Serial number and model code may only contain letters and digits."
+    },
+    "abort": {
+      "already_configured": "This inverter is already set up.",
+      "mqtt_not_ready": "Set up the MQTT integration first. The inverter talks to Home Assistant through it."
+    }
+  },
+  "entity": {
+    "number": {
+      "performance_level": { "name": "Performance level" },
+      "load_alarm_threshold": { "name": "Load alarm threshold" }
+    },
+    "select": {
+      "inverter_mode": {
+        "name": "Inverter mode",
+        "state": {
+          "normal": "Normal",
+          "ups": "UPS",
+          "equipment": "Equipment"
+        }
+      }
+    },
+    "sensor": {
+      "mains_voltage": { "name": "Mains voltage" },
+      "output_voltage": { "name": "Output voltage" },
+      "output_frequency": { "name": "Output frequency" },
+      "load": { "name": "Load" },
+      "battery_voltage": { "name": "Battery voltage" },
+      "charging_current": { "name": "Charging current" },
+      "backup_time": { "name": "Backup time" },
+      "backup_energy": { "name": "Backup energy used" },
+      "power_source": {
+        "name": "Power source",
+        "state": {
+          "mains": "Mains",
+          "battery": "Battery"
+        }
+      },
+      "battery_status": {
+        "name": "Battery status",
+        "state": {
+          "normal": "Normal",
+          "charging": "Charging",
+          "low": "Low"
+        }
+      },
+      "battery_health": { "name": "Battery health" },
+      "battery_capacity": { "name": "Battery capacity" },
+      "low_battery_alarm_voltage": { "name": "Low battery alarm voltage" },
+      "wifi_signal": { "name": "Wi-Fi signal" },
+      "wifi_network": { "name": "Wi-Fi network" }
+    },
+    "switch": {
+      "turbo_charging": { "name": "Turbo charging" },
+      "changeover_buzzer": { "name": "Mains changeover buzzer" },
+      "appliance_mode": { "name": "Appliance mode" },
+      "daytime_load_usage": { "name": "Daytime load usage" }
+    }
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "domain": "vguard_inverter",
+  "name": "V-Guard Inverter",
+  "codeowners": [
+    "@ankurpandeyvns"
+  ],
+  "config_flow": true,
+  "dependencies": [
+    "mqtt"
+  ],
+  "documentation": "https://github.com/dtechterminal/vguard_ups_ha",
+  "integration_type": "device",
+  "iot_class": "local_push",
+  "issue_tracker": "https://github.com/dtechterminal/vguard_ups_ha/issues",
+  "requirements": [],
+  "version": "3.0.0"
+}
