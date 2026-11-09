@@ -8,6 +8,7 @@ from typing import Any
 from homeassistant.components import mqtt
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC, DeviceInfo
 from homeassistant.helpers.event import async_track_time_interval
@@ -52,7 +53,7 @@ class VGuardDevice:
         self.model: str = data[CONF_MODEL]
         # Entries from 3.0 are all inverters
         self.category: str = data.get(CONF_CATEGORY, protocol.INVERTER)
-        # Inverters take plain commands; only water heater commands are encrypted
+        # Water heaters may encrypt their messages with a per-device key
         self.cipher = (VGuardCipher(data[CONF_KEY], data[CONF_IV])
                        if data.get(CONF_KEY) and self.category == protocol.WATER_HEATER else None)
         self.values: dict[str, str] = {}
@@ -168,18 +169,17 @@ class VGuardDevice:
             self._notify(set())
         await self.async_request_telemetry()
 
-    async def _async_publish(self, command: str) -> None:
-        payload = self.cipher.encrypt(command) if self.cipher else command
-        await mqtt.async_publish(self.hass, self._topic(protocol.control_topic), payload, qos=1)
-
     async def async_request_telemetry(self) -> None:
         """Ask an inverter to (keep) streaming telemetry."""
         await mqtt.async_publish(
             self.hass, self._topic(protocol.control_topic), protocol.COMMAND_START, qos=1)
 
     async def async_send(self, command: str, **expected: str) -> None:
-        """Send a command and show the values it should lead to until telemetry confirms."""
-        await self._async_publish(command)
+        """Send an inverter a command and show the values it should lead to until
+        telemetry confirms."""
+        if not self.is_inverter:
+            raise HomeAssistantError("V-Guard water heaters are read-only")
+        await mqtt.async_publish(self.hass, self._topic(protocol.control_topic), command, qos=1)
         if changed := {code for code, value in expected.items() if self.values.get(code) != value}:
             self.values.update(expected)
             self._notify(changed)

@@ -137,21 +137,3 @@ def test_heater_target_prefers_vg041():
 def test_heater_temperatures_missing(values, current):
     assert protocol.heater_current_temperature(values) == current
     assert protocol.heater_target_temperature(values) is None
-
-
-@pytest.mark.parametrize(("temperature", "command"), [
-    (50, "VG007:385001001000"),
-    (44.6, "VG007:384501001000"),
-    (10, "VG007:383001001000"),  # Clamped to the app's 30–75 °C
-    (90, "VG007:387501001000"),
-])
-def test_heater_temperature_command(temperature, command):
-    assert protocol.heater_temperature_command(temperature) == command
-
-
-def test_heater_expected_target_follows_reported_fields():
-    # Without VG041 the target lives, reversed, in VG007
-    assert protocol.heater_expected_target(HEATER, 62) == {"VG007": "482601001000"}
-    assert protocol.heater_target_temperature(
-        {**HEATER, **protocol.heater_expected_target(HEATER, 62)}) == 62
-    assert protocol.heater_expected_target({**HEATER, "VG041": "500"}, 62) == {"VG041": "620"}

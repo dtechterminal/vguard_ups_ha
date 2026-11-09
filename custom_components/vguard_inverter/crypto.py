@@ -1,8 +1,8 @@
-"""AES payload encryption used by V-Guard water heaters.
+"""AES payload decryption for V-Guard water heaters.
 
-The V-Guard app encrypts device commands with AES-128-CBC, PKCS7 padding and base64, using
-a 16-character key and IV per device. The app gets them from V-Guard's cloud when the device
-is added to an account.
+V-Guard water heater messages may be AES-128-CBC encrypted and base64 encoded, using a
+16-character key and IV per device. The V-Guard app gets them from V-Guard's cloud when the
+device is added to an account.
 """
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ KEY_LENGTH = 16
 
 
 class VGuardCipher:
-    """Encrypt commands for, and decrypt messages from, one device."""
+    """Decrypt messages from one device."""
 
     def __init__(self, key: str, iv: str) -> None:
         self._key = key.encode()
@@ -26,13 +26,6 @@ class VGuardCipher:
 
     def _cipher(self) -> Cipher:
         return Cipher(algorithms.AES(self._key), modes.CBC(self._iv))
-
-    def encrypt(self, text: str) -> str:
-        """Return `text` encrypted and base64 encoded."""
-        padder = padding.PKCS7(128).padder()
-        data = padder.update(text.encode()) + padder.finalize()
-        encryptor = self._cipher().encryptor()
-        return base64.b64encode(encryptor.update(data) + encryptor.finalize()).decode()
 
     def decrypt(self, payload: str | bytes) -> str | None:
         """Return the text of a base64 encrypted payload, or None if it isn't one."""

@@ -11,11 +11,11 @@ This is an independent community integration. It is not made, supported or endor
 - **Battery:** voltage, charging current, status, health, capacity and the estimated backup time.
 - **Backup energy:** a running total of energy supplied from the battery, usable in the Energy dashboard.
 - **Settings:** inverter mode (Normal, UPS, Equipment), turbo charging, mains changeover buzzer, appliance mode, daytime load usage, performance level and load alarm threshold.
-- **Water heaters (beta):** power, target temperature (30–75 °C), water temperature and whether it's heating.
+- **Water heaters (beta, read-only):** whether it's on, water and target temperature, and whether it's heating.
 - **Discovery:** finds devices on the broker during setup.
 - **Availability:** entities go unavailable when a device drops off the broker or stops reporting.
 
-Water heater support is built from an earlier version's notes and has been checked against a simulated heater, not yet a real one. Please [open an issue](https://github.com/dtechterminal/vguard_ups_ha/issues) with a debug log if yours doesn't respond.
+Water heater support is built from an earlier version's notes and has been checked against a simulated heater, not yet a real one. It only reads the heater; nothing is sent to it. Power and temperature control will return in a later release once they are confirmed on real hardware. Please [open an issue](https://github.com/dtechterminal/vguard_ups_ha/issues) with a debug log if your heater's readings look wrong.
 
 ## Requirements
 
@@ -74,7 +74,7 @@ If nothing is found, choose **Enter the serial number** instead. The serial numb
 
 ### Water heater encryption key
 
-The V-Guard app encrypts water heater commands with a 16-character key and IV that V-Guard's cloud gives it for each heater. If your heater shows its readings but ignores power and temperature changes, it needs them. The V-Guard app's account API returns them with your product list (`key` and `iv`). Add them by removing the heater and setting it up again.
+Some water heaters may encrypt their messages with a 16-character key and IV that V-Guard's cloud gives the app for each heater. If your heater is on the broker but its readings stay empty, add them. The V-Guard app's account API returns them with your product list (`key` and `iv`). Add them by removing the heater and setting it up again.
 
 ## Entities
 
@@ -101,7 +101,7 @@ The V-Guard app encrypts water heater commands with a 16-character key and IV th
 
 | Entity | Type | Notes |
 |---|---|---|
-| Water heater | Water heater | On/off, target temperature 30–75 °C, current water temperature |
+| Water heater | Water heater | On or off, water temperature and target temperature (read-only) |
 | Heating | Binary sensor | On while the element heats |
 | Wi-Fi signal, Wi-Fi network | Sensor | Diagnostic, disabled by default |
 
@@ -111,13 +111,13 @@ The firmware version and Wi-Fi MAC address appear on the device page.
 
 The inverter publishes a retained `online`/`offline` message on `device/dups/<model>/lwt/<serial>`. After it receives `start` on `apps/dups/<model>/<serial>` it streams telemetry on `device/dups/<model>/<serial>` for about four minutes. The integration sends `start` every minute so the stream never stops. Settings are changed by sending `<code>:<value>` (for example `VG099:1`) to the same topic, and the next telemetry confirms the change.
 
-A water heater uses the same scheme under `smartewh`: `VG094:1`/`VG094:0` switch it on and off, and `VG007:38<temperature>01001000` sets the target. With a key, commands are AES-128-CBC encrypted and base64 encoded, as the V-Guard app sends them.
+A water heater reports under `smartewh` while it has power: `VG094` is `1` when on, `VG007` starts with the water temperature, and `VG041` or `VG007` holds the target. With a key, encrypted (AES-128-CBC, base64) messages are decrypted. The integration sends nothing to water heaters.
 
 ## Troubleshooting
 
 - **No devices found:** check that `vguardbox.com` resolves to your broker from the device's network, and that `mosquitto_sub` (above) shows the `lwt` topic. Water heaters only appear while switched on.
 - **Entities unavailable:** the device is offline on the broker or has stopped reporting. Check its power, Wi-Fi and the broker. A water heater switched off at the wall shows as unavailable.
-- **Water heater ignores commands:** add its encryption key (above).
+- **Water heater readings stay empty while it's on:** add its encryption key (above).
 - **Debug logging:** add this to `configuration.yaml` and restart:
 
   ```yaml

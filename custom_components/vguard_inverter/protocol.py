@@ -8,9 +8,8 @@ VG-coded string values. Topics are `device/<category>/<model>/<serial>`, with `d
 inverters and `smartewh` for water heaters.
 
 Inverters stream telemetry every couple of seconds for about four minutes after `start`.
-Water heater support follows the earlier V-Guard Smart draft and still needs confirming
-against a live heater: commands may need the heater's AES key, and its temperatures are
-read from the VG007 status field.
+Water heaters are read-only: their readings follow the earlier V-Guard Smart draft, with
+temperatures in the VG007 status field, and nothing is sent to them.
 """
 from __future__ import annotations
 
@@ -159,19 +158,3 @@ def heater_target_temperature(values: dict[str, str]) -> float | None:
     if len(status) >= 4 and status[2:4].isdigit():
         return _in_range(number(status[3] + status[2]))
     return None
-
-
-def heater_temperature_command(temperature: float) -> str:
-    """Return the command that sets the target temperature, as the V-Guard app sends it."""
-    temperature = max(HEATER_MIN_TEMP, min(HEATER_MAX_TEMP, round(temperature)))
-    return set_command(CODE_HEATER_STATUS, f"38{temperature:02d}01001000")
-
-
-def heater_expected_target(values: dict[str, str], temperature: float) -> dict[str, str]:
-    """Return the values that will report `temperature` as the target, in the fields the
-    heater uses, so the new target shows until its telemetry confirms it."""
-    target = max(HEATER_MIN_TEMP, min(HEATER_MAX_TEMP, round(temperature)))
-    if CODE_HEATER_TARGET in values or len(status := values.get(CODE_HEATER_STATUS, "")) < 4:
-        return {CODE_HEATER_TARGET: str(target * 10)}
-    digits = f"{target:02d}"
-    return {CODE_HEATER_STATUS: status[:2] + digits[1] + digits[0] + status[4:]}

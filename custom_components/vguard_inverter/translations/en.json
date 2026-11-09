@@ -18,13 +18,13 @@
       },
       "key": {
         "title": "Water heater encryption key",
-        "description": "Some V-Guard water heaters only accept encrypted commands. Leave both fields empty to try without.",
+        "description": "Some V-Guard water heaters may encrypt their readings. Leave both fields empty unless the heater's readings stay empty.",
         "data": {
           "key": "Key",
           "iv": "IV"
         },
         "data_description": {
-          "key": "Leave empty unless the heater ignores commands. The 16-character key the V-Guard app received for this heater.",
+          "key": "The 16-character key the V-Guard app received for this heater.",
           "iv": "The 16-character IV that comes with the key."
         }
       },
