@@ -1,10 +1,16 @@
-"""V-Guard inverter MQTT topics, commands and telemetry parsing.
+"""V-Guard MQTT topics, commands and telemetry parsing.
 
 This module has no Home Assistant imports so it can be tested on its own.
 
-The inverter's Wi-Fi module connects to the V-Guard broker (redirected to a local one). It
-announces itself on a retained last-will topic and streams telemetry, a JSON object of
-VG-coded string values, every couple of seconds after it receives `start`.
+A V-Guard device's Wi-Fi module connects to the V-Guard broker (redirected to a local one).
+It announces itself on a retained last-will topic and sends telemetry, a JSON object of
+VG-coded string values. Topics are `device/<category>/<model>/<serial>`, with `dups` for
+inverters and `smartewh` for water heaters.
+
+Inverters stream telemetry every couple of seconds for about four minutes after `start`.
+Water heater support follows the earlier V-Guard Smart draft and still needs confirming
+against a live heater: commands may need the heater's AES key, and its temperatures are
+read from the VG007 status field.
 """
 from __future__ import annotations
 
@@ -14,54 +20,69 @@ import math
 import re
 from typing import Any
 
-CATEGORY = "dups"  # V-Guard's product category for inverters
-DEFAULT_MODEL = "CE01"
+INVERTER = "dups"
+WATER_HEATER = "smartewh"
+CATEGORIES = (INVERTER, WATER_HEATER)
+DEFAULT_MODELS = {INVERTER: "CE01", WATER_HEATER: "3013"}
+DEFAULT_MODEL = DEFAULT_MODELS[INVERTER]
+
 COMMAND_START = "start"
 TELEMETRY_KEY = "VG029"
 LWT_ONLINE = "online"
 LWT_OFFLINE = "offline"
 
-DISCOVERY_TOPIC = f"device/{CATEGORY}/#"
+DISCOVERY_TOPICS = tuple(f"device/{category}/#" for category in CATEGORIES)
+
+# Water heater codes
+CODE_HEATER_STATUS = "VG007"  # 12 digits: current temperature, target, flags
+CODE_HEATER_TARGET = "VG041"  # Target temperature in tenths of a degree
+CODE_HEATER_POWER = "VG094"  # 1 on, 0 off
+CODE_HEATER_HEATING = "VG190"  # 1 while the element is heating
+HEATER_MIN_TEMP = 30  # The V-Guard app's range
+HEATER_MAX_TEMP = 75
 
 _SEGMENT = re.compile(r"^[A-Za-z0-9]+$")
 
 
-def telemetry_topic(model: str, serial: str) -> str:
-    """Return the topic an inverter streams telemetry on."""
-    return f"device/{CATEGORY}/{model}/{serial}"
+def telemetry_topic(category: str, model: str, serial: str) -> str:
+    """Return the topic a device sends telemetry on."""
+    return f"device/{category}/{model}/{serial}"
 
 
-def lwt_topic(model: str, serial: str) -> str:
-    """Return the retained topic an inverter reports online/offline on."""
-    return f"device/{CATEGORY}/{model}/lwt/{serial}"
+def lwt_topic(category: str, model: str, serial: str) -> str:
+    """Return the retained topic a device reports online/offline on."""
+    return f"device/{category}/{model}/lwt/{serial}"
 
 
-def control_topic(model: str, serial: str) -> str:
+def control_topic(category: str, model: str, serial: str) -> str:
     """Return the topic commands are sent to."""
-    return f"apps/{CATEGORY}/{model}/{serial}"
+    return f"apps/{category}/{model}/{serial}"
 
 
 @dataclass(frozen=True)
 class TopicInfo:
     """What a device topic says about its sender."""
 
+    category: str
     model: str
     serial: str
     lwt: bool
 
 
 def parse_topic(topic: str) -> TopicInfo | None:
-    """Return the model and serial of a telemetry or last-will topic."""
+    """Return the category, model and serial of a telemetry or last-will topic."""
     parts = topic.split("/")
-    if len(parts) == 4 and parts[:2] == ["device", CATEGORY]:
+    if len(parts) < 4 or parts[0] != "device" or parts[1] not in CATEGORIES:
+        return None
+    if len(parts) == 4:
         model, serial, lwt = parts[2], parts[3], False
-    elif len(parts) == 5 and parts[:2] == ["device", CATEGORY] and parts[3] == "lwt":
+    elif len(parts) == 5 and parts[3] == "lwt":
         model, serial, lwt = parts[2], parts[4], True
     else:
         return None
     if not (_SEGMENT.match(model) and _SEGMENT.match(serial)) or len(serial) < 6:
         return None
-    return TopicInfo(model, serial, lwt)
+    return TopicInfo(parts[1], model, serial, lwt)
 
 
 def _text(payload: str | bytes) -> str:
@@ -108,7 +129,49 @@ def number(value: str | None, scale: float = 1) -> float | None:
 
 
 def mac_address(value: str | None) -> str | None:
-    """Format the reported Wi-Fi MAC (`a1b2c3d4e5f6`) with colons."""
+    """Format a reported Wi-Fi MAC (`a1b2c3d4e5f6`) with colons."""
     if value is None or not re.fullmatch(r"[0-9A-Fa-f]{12}", value):
         return None
     return ":".join(value[i:i + 2] for i in range(0, 12, 2)).lower()
+
+
+def _in_range(value: float | None) -> float | None:
+    if value is None or not HEATER_MIN_TEMP <= value <= HEATER_MAX_TEMP:
+        return None
+    return value
+
+
+def heater_current_temperature(values: dict[str, str]) -> float | None:
+    """Return the water temperature, the first two digits of VG007 (`48...` is 48 °C)."""
+    status = values.get(CODE_HEATER_STATUS, "")
+    return number(status[:2]) if len(status) >= 2 and status[:2].isdigit() else None
+
+
+def heater_target_temperature(values: dict[str, str]) -> float | None:
+    """Return the target temperature.
+
+    VG041 reports it in tenths of a degree. Without VG041, digits 3 and 4 of VG007 hold it
+    with the digits reversed (`4805...` is 50 °C).
+    """
+    if (target := _in_range(number(values.get(CODE_HEATER_TARGET), 10))) is not None:
+        return target
+    status = values.get(CODE_HEATER_STATUS, "")
+    if len(status) >= 4 and status[2:4].isdigit():
+        return _in_range(number(status[3] + status[2]))
+    return None
+
+
+def heater_temperature_command(temperature: float) -> str:
+    """Return the command that sets the target temperature, as the V-Guard app sends it."""
+    temperature = max(HEATER_MIN_TEMP, min(HEATER_MAX_TEMP, round(temperature)))
+    return set_command(CODE_HEATER_STATUS, f"38{temperature:02d}01001000")
+
+
+def heater_expected_target(values: dict[str, str], temperature: float) -> dict[str, str]:
+    """Return the values that will report `temperature` as the target, in the fields the
+    heater uses, so the new target shows until its telemetry confirms it."""
+    target = max(HEATER_MIN_TEMP, min(HEATER_MAX_TEMP, round(temperature)))
+    if CODE_HEATER_TARGET in values or len(status := values.get(CODE_HEATER_STATUS, "")) < 4:
+        return {CODE_HEATER_TARGET: str(target * 10)}
+    digits = f"{target:02d}"
+    return {CODE_HEATER_STATUS: status[:2] + digits[1] + digits[0] + status[4:]}

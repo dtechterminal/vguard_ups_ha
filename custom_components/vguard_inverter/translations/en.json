@@ -2,48 +2,75 @@
   "config": {
     "step": {
       "user": {
-        "title": "Add a V-Guard inverter",
-        "description": "The inverter must be connected to the same MQTT broker as Home Assistant. See the README for the DNS redirect it needs.",
+        "title": "Add a V-Guard device",
+        "description": "The inverter or water heater must be connected to the same MQTT broker as Home Assistant. See the README for the DNS redirect it needs.",
         "menu_options": {
-          "mqtt_discovery": "Find inverters on MQTT",
+          "mqtt_discovery": "Find devices on MQTT",
           "manual": "Enter the serial number"
         }
       },
       "pick_device": {
-        "title": "Choose an inverter",
-        "description": "Found {device_count} inverter(s) on the MQTT broker.",
+        "title": "Choose a device",
+        "description": "Found {device_count} device(s) on the MQTT broker. A water heater only shows up while it's switched on.",
         "data": {
-          "serial": "Inverter"
+          "serial": "Device"
+        }
+      },
+      "key": {
+        "title": "Water heater encryption key",
+        "description": "Some V-Guard water heaters only accept encrypted commands. Leave both fields empty to try without.",
+        "data": {
+          "key": "Key",
+          "iv": "IV"
+        },
+        "data_description": {
+          "key": "Leave empty unless the heater ignores commands. The 16-character key the V-Guard app received for this heater.",
+          "iv": "The 16-character IV that comes with the key."
         }
       },
       "manual": {
-        "title": "Enter the inverter's serial number",
-        "description": "The serial number is the last part of the inverter's MQTT topic, after `device/dups/CE01/`.",
+        "title": "Enter the device's details",
+        "description": "The serial number is the last part of the device's MQTT topic, after `device/dups/CE01/` for an inverter or `device/smartewh/3013/` for a water heater.",
         "data": {
+          "category": "Device",
           "serial": "Serial number",
-          "model": "Model code"
+          "model": "Model code",
+          "key": "Key",
+          "iv": "IV"
         },
         "data_description": {
-          "model": "The part of the topic before the serial number. CE01 for current inverters."
+          "model": "The part of the topic before the serial number. Leave empty for CE01 (inverter) or 3013 (water heater).",
+          "key": "Water heaters only. Leave empty unless the heater ignores commands. The 16-character key the V-Guard app received for this heater.",
+          "iv": "Water heaters only. The 16-character IV that comes with the key."
         }
       }
     },
     "progress": {
-      "discovering": "Listening for V-Guard inverters on MQTT…"
+      "discovering": "Listening for V-Guard devices on MQTT…"
     },
     "error": {
-      "no_devices_found": "No new V-Guard inverters were heard on MQTT. Check the DNS redirect, or enter the serial number.",
-      "invalid_serial": "Serial number and model code may only contain letters and digits."
+      "no_devices_found": "No new V-Guard devices were heard on MQTT. Check the DNS redirect, switch the water heater on, or enter the serial number.",
+      "invalid_serial": "Serial number and model code may only contain letters and digits.",
+      "invalid_key": "The key and IV must both be 16 characters, or both be left empty."
     },
     "abort": {
-      "already_configured": "This inverter is already set up.",
-      "mqtt_not_ready": "Set up the MQTT integration first. The inverter talks to Home Assistant through it."
+      "already_configured": "This device is already set up.",
+      "mqtt_not_ready": "Set up the MQTT integration first. V-Guard devices talk to Home Assistant through it."
     }
   },
   "entity": {
+    "binary_sensor": {
+      "heating": {
+        "name": "Heating"
+      }
+    },
     "number": {
-      "performance_level": { "name": "Performance level" },
-      "load_alarm_threshold": { "name": "Load alarm threshold" }
+      "performance_level": {
+        "name": "Performance level"
+      },
+      "load_alarm_threshold": {
+        "name": "Load alarm threshold"
+      }
     },
     "select": {
       "inverter_mode": {
@@ -56,14 +83,30 @@
       }
     },
     "sensor": {
-      "mains_voltage": { "name": "Mains voltage" },
-      "output_voltage": { "name": "Output voltage" },
-      "output_frequency": { "name": "Output frequency" },
-      "load": { "name": "Load" },
-      "battery_voltage": { "name": "Battery voltage" },
-      "charging_current": { "name": "Charging current" },
-      "backup_time": { "name": "Backup time" },
-      "backup_energy": { "name": "Backup energy used" },
+      "mains_voltage": {
+        "name": "Mains voltage"
+      },
+      "output_voltage": {
+        "name": "Output voltage"
+      },
+      "output_frequency": {
+        "name": "Output frequency"
+      },
+      "load": {
+        "name": "Load"
+      },
+      "battery_voltage": {
+        "name": "Battery voltage"
+      },
+      "charging_current": {
+        "name": "Charging current"
+      },
+      "backup_time": {
+        "name": "Backup time"
+      },
+      "backup_energy": {
+        "name": "Backup energy used"
+      },
       "power_source": {
         "name": "Power source",
         "state": {
@@ -79,17 +122,43 @@
           "low": "Low"
         }
       },
-      "battery_health": { "name": "Battery health" },
-      "battery_capacity": { "name": "Battery capacity" },
-      "low_battery_alarm_voltage": { "name": "Low battery alarm voltage" },
-      "wifi_signal": { "name": "Wi-Fi signal" },
-      "wifi_network": { "name": "Wi-Fi network" }
+      "battery_health": {
+        "name": "Battery health"
+      },
+      "battery_capacity": {
+        "name": "Battery capacity"
+      },
+      "low_battery_alarm_voltage": {
+        "name": "Low battery alarm voltage"
+      },
+      "wifi_signal": {
+        "name": "Wi-Fi signal"
+      },
+      "wifi_network": {
+        "name": "Wi-Fi network"
+      }
     },
     "switch": {
-      "turbo_charging": { "name": "Turbo charging" },
-      "changeover_buzzer": { "name": "Mains changeover buzzer" },
-      "appliance_mode": { "name": "Appliance mode" },
-      "daytime_load_usage": { "name": "Daytime load usage" }
+      "turbo_charging": {
+        "name": "Turbo charging"
+      },
+      "changeover_buzzer": {
+        "name": "Mains changeover buzzer"
+      },
+      "appliance_mode": {
+        "name": "Appliance mode"
+      },
+      "daytime_load_usage": {
+        "name": "Daytime load usage"
+      }
+    }
+  },
+  "selector": {
+    "category": {
+      "options": {
+        "dups": "Inverter",
+        "smartewh": "Water heater"
+      }
     }
   }
 }

@@ -1,4 +1,4 @@
-"""Sensors for V-Guard inverters.
+"""Sensors for V-Guard inverters and water heaters.
 
 VG codes were matched against a live inverter's telemetry and the V-Guard app.
 """
@@ -53,7 +53,7 @@ def _enum(key: str, code: str, states: dict[str, str]) -> VGuardSensorDescriptio
     )
 
 
-SENSORS = (
+INVERTER_SENSORS = (
     VGuardSensorDescription(
         key="mains_voltage", translation_key="mains_voltage", code="VG014",
         device_class=SensorDeviceClass.VOLTAGE, state_class=SensorStateClass.MEASUREMENT,
@@ -112,6 +112,9 @@ SENSORS = (
         native_unit_of_measurement=UnitOfElectricPotential.VOLT,
         entity_category=EntityCategory.DIAGNOSTIC,
     ),
+)
+
+WIFI_SENSORS = (
     VGuardSensorDescription(
         key="wifi_signal", translation_key="wifi_signal", code="VG011",
         device_class=SensorDeviceClass.SIGNAL_STRENGTH, state_class=SensorStateClass.MEASUREMENT,
@@ -131,15 +134,16 @@ async def async_setup_entry(
     entry: VGuardConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
-    """Set up the inverter's sensors."""
+    """Set up the device's sensors."""
+    device = entry.runtime_data
+    descriptions = (INVERTER_SENSORS if device.is_inverter else ()) + WIFI_SENSORS
     async_add_entities(
-        VGuardSensor(entry.runtime_data, description, description.code)
-        for description in SENSORS
+        VGuardSensor(device, description, description.code) for description in descriptions
     )
 
 
 class VGuardSensor(VGuardEntity, SensorEntity):
-    """A reading the inverter reports."""
+    """A reading the device reports."""
 
     entity_description: VGuardSensorDescription
 

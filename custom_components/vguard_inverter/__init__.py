@@ -1,4 +1,4 @@
-"""The V-Guard Inverter integration."""
+"""The V-Guard Smart integration."""
 from __future__ import annotations
 
 import logging
@@ -11,27 +11,31 @@ from homeassistant.exceptions import ConfigEntryNotReady
 
 from . import protocol
 from .const import CONF_MODEL, CONF_SERIAL
-from .device import VGuardConfigEntry, VGuardInverter
+from .device import VGuardConfigEntry, VGuardDevice
 
 _LOGGER = logging.getLogger(__name__)
 
-PLATFORMS = [Platform.NUMBER, Platform.SELECT, Platform.SENSOR, Platform.SWITCH]
+PLATFORMS = {
+    protocol.INVERTER: [Platform.NUMBER, Platform.SELECT, Platform.SENSOR, Platform.SWITCH],
+    protocol.WATER_HEATER: [Platform.BINARY_SENSOR, Platform.SENSOR, Platform.WATER_HEATER],
+}
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: VGuardConfigEntry) -> bool:
-    """Set up an inverter from a config entry."""
+    """Set up a device from a config entry."""
     if not await mqtt.async_wait_for_mqtt_client(hass):
         raise ConfigEntryNotReady("MQTT is not available")
-    device = VGuardInverter(hass, entry)
+    device = VGuardDevice(hass, entry)
     entry.runtime_data = device
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS[device.category])
     await device.async_start()
     return True
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: VGuardConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await hass.config_entries.async_unload_platforms(
+        entry, PLATFORMS[entry.runtime_data.category])
 
 
 async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:

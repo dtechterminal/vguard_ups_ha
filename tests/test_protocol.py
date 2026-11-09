@@ -22,22 +22,26 @@ TELEMETRY = json.dumps({"VG029": {
 
 
 def test_topics():
-    assert protocol.telemetry_topic("CE01", SERIAL) == f"device/dups/CE01/{SERIAL}"
-    assert protocol.lwt_topic("CE01", SERIAL) == f"device/dups/CE01/lwt/{SERIAL}"
-    assert protocol.control_topic("CE01", SERIAL) == f"apps/dups/CE01/{SERIAL}"
+    inv, ewh = protocol.INVERTER, protocol.WATER_HEATER
+    assert protocol.telemetry_topic(inv, "CE01", SERIAL) == f"device/dups/CE01/{SERIAL}"
+    assert protocol.lwt_topic(inv, "CE01", SERIAL) == f"device/dups/CE01/lwt/{SERIAL}"
+    assert protocol.control_topic(inv, "CE01", SERIAL) == f"apps/dups/CE01/{SERIAL}"
+    assert protocol.control_topic(ewh, "3013", SERIAL) == f"apps/smartewh/3013/{SERIAL}"
 
 
-@pytest.mark.parametrize(("topic", "lwt"), [
-    (f"device/dups/CE01/{SERIAL}", False),
-    (f"device/dups/CE01/lwt/{SERIAL}", True),
+@pytest.mark.parametrize(("topic", "category", "model", "lwt"), [
+    (f"device/dups/CE01/{SERIAL}", "dups", "CE01", False),
+    (f"device/dups/CE01/lwt/{SERIAL}", "dups", "CE01", True),
+    (f"device/smartewh/3013/{SERIAL}", "smartewh", "3013", False),
+    (f"device/smartewh/3013/lwt/{SERIAL}", "smartewh", "3013", True),
 ])
-def test_parse_topic(topic, lwt):
-    assert protocol.parse_topic(topic) == protocol.TopicInfo("CE01", SERIAL, lwt)
+def test_parse_topic(topic, category, model, lwt):
+    assert protocol.parse_topic(topic) == protocol.TopicInfo(category, model, SERIAL, lwt)
 
 
 @pytest.mark.parametrize("topic", [
     f"apps/dups/CE01/{SERIAL}",  # Our own commands
-    f"device/smartewh/3013/{SERIAL}",  # A water heater
+    f"device/stabilizer/X1/{SERIAL}",  # Not supported
     f"device/dups/CE01/x/{SERIAL}",
     "device/dups/CE01/123",  # Too short for a serial
     "device/dups/CE01/lwt",
@@ -47,8 +51,8 @@ def test_parse_topic_rejects_others(topic):
     assert protocol.parse_topic(topic) is None
 
 
-def test_discovery_topic_covers_both():
-    assert protocol.DISCOVERY_TOPIC == "device/dups/#"
+def test_discovery_topics():
+    assert protocol.DISCOVERY_TOPICS == ("device/dups/#", "device/smartewh/#")
 
 
 def test_parse_telemetry():
@@ -107,3 +111,47 @@ def test_number(value, scale, expected):
 ])
 def test_mac_address(value, expected):
     assert protocol.mac_address(value) == expected
+
+
+# Water heater status as the earlier draft recorded it: 48 °C now, target 50 °C (digits reversed)
+HEATER = {"VG007": "480501001000", "VG094": "1", "VG190": "0"}
+
+
+def test_heater_temperatures_from_status():
+    assert protocol.heater_current_temperature(HEATER) == 48
+    assert protocol.heater_target_temperature(HEATER) == 50
+
+
+def test_heater_target_prefers_vg041():
+    assert protocol.heater_target_temperature({**HEATER, "VG041": "450"}) == 45
+    # Out of range VG041 falls back to the status field
+    assert protocol.heater_target_temperature({**HEATER, "VG041": "0"}) == 50
+
+
+@pytest.mark.parametrize(("values", "current"), [
+    ({}, None),
+    ({"VG007": "4"}, None),
+    ({"VG007": "ab"}, None),
+    ({"VG007": "4899"}, 48),  # Target 99 °C is outside the heater's range
+])
+def test_heater_temperatures_missing(values, current):
+    assert protocol.heater_current_temperature(values) == current
+    assert protocol.heater_target_temperature(values) is None
+
+
+@pytest.mark.parametrize(("temperature", "command"), [
+    (50, "VG007:385001001000"),
+    (44.6, "VG007:384501001000"),
+    (10, "VG007:383001001000"),  # Clamped to the app's 30–75 °C
+    (90, "VG007:387501001000"),
+])
+def test_heater_temperature_command(temperature, command):
+    assert protocol.heater_temperature_command(temperature) == command
+
+
+def test_heater_expected_target_follows_reported_fields():
+    # Without VG041 the target lives, reversed, in VG007
+    assert protocol.heater_expected_target(HEATER, 62) == {"VG007": "482601001000"}
+    assert protocol.heater_target_temperature(
+        {**HEATER, **protocol.heater_expected_target(HEATER, 62)}) == 62
+    assert protocol.heater_expected_target({**HEATER, "VG041": "500"}, 62) == {"VG041": "620"}

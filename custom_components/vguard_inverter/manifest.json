@@ -1,6 +1,6 @@
 {
   "domain": "vguard_inverter",
-  "name": "V-Guard Inverter",
+  "name": "V-Guard Smart",
   "codeowners": [
     "@ankurpandeyvns"
   ],
@@ -13,5 +13,5 @@
   "iot_class": "local_push",
   "issue_tracker": "https://github.com/dtechterminal/vguard_ups_ha/issues",
   "requirements": [],
-  "version": "3.0.0"
+  "version": "3.1.0"
 }
